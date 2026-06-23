@@ -8,13 +8,13 @@
     <style>
       .debug-toggle-btn {
         position: fixed;
-        left: 20px;
-        bottom: 20px;
+        left: clamp(16px, 2.27vh + 7.5px, 32px);
+        bottom: clamp(16px, 2.27vh + 7.5px, 32px);
         z-index: 10000;
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
+        gap: clamp(4px, 0.57vh + 1.9px, 8px);
+        padding: clamp(6px, 0.85vh + 2.8px, 12px) clamp(12px, 1.7vh + 5.6px, 24px);
         border-radius: 9999px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background: rgba(20, 20, 25, 0.7);
@@ -22,7 +22,7 @@
         -webkit-backdrop-filter: blur(12px);
         color: #e4e4e7;
         font-family: inherit;
-        font-size: 14px;
+        font-size: clamp(12px, 1.7vh + 5.6px, 24px);
         font-weight: 500;
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -51,7 +51,7 @@
     <div id="app-root"></div>
 
     <button id="debug-toggle-btn" class="debug-toggle-btn" style="display: none;" onclick="event.stopPropagation(); toggleDebugPage();">
-      <span style="font-size: 15px; line-height: 1;">🐞</span>
+      <span style="font-size: 1.07em; line-height: 1;">🐞</span>
       <span>Debug</span>
     </button>
 
@@ -128,10 +128,10 @@
           }
           btn.style.display = "flex";
           btn.classList.add("active");
-          btn.innerHTML = `<span style="font-size: 12px; line-height: 1;">✕</span><span>Close</span>`;
+          btn.innerHTML = `<span style="font-size: 0.86em; line-height: 1;">✕</span><span>Close</span>`;
         } else {
           btn.classList.remove("active");
-          btn.innerHTML = `<span style="font-size: 15px; line-height: 1;">🐞</span><span>Debug</span>`;
+          btn.innerHTML = `<span style="font-size: 1.07em; line-height: 1;">🐞</span><span>Debug</span>`;
           if (!window.debugBtnTimer) {
             btn.style.display = "none";
           }
