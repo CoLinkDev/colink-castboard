@@ -20,17 +20,11 @@
           overflow: hidden;
         }
 
-        .empty-lyrics {
-          position: absolute;
-          top: var(--active-y);
-          left: var(--lyric-left);
-          width: var(--lyric-width);
-          margin: 0;
-          color: rgba(216, 222, 232, 0.58);
-          font-size: clamp(32px, min(4.6vw, 9vh), 70px);
-          font-weight: 700;
-          line-height: 1.16;
-          text-align: left;
+        .line.empty-lyrics {
+          transform: translate3d(0, var(--active-y), 0) scale(1.08);
+          opacity: 1;
+          visibility: visible;
+          filter: none;
         }
 
 
@@ -255,7 +249,7 @@
           if (!stage) return;
 
           const empty = document.createElement("p");
-          empty.className = "empty-lyrics";
+          empty.className = "line is-current empty-lyrics";
           empty.textContent = noLyricsLabel();
           stage.appendChild(empty);
         }
