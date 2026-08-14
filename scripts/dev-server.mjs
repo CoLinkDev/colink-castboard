@@ -92,8 +92,13 @@ async function watchTree(dir) {
 }
 
 await watchTree(root)
+server.once('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Stopping dev server.`)
+    process.exit(1)
+  }
+  throw error
+})
 server.listen(port, '0.0.0.0', () => {
-  console.log(`Serving ${root}`)
-  console.log(`Android emulator URL: http://10.0.2.2:${port}/index.html`)
-  console.log(`LAN URL: http://<computer-ip>:${port}/index.html`)
+  console.log(`Serving at: http://0.0.0.0:${port}`)
 })
