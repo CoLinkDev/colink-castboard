@@ -16,6 +16,18 @@ window.resizeTimer = 0;
 window.navManager = null;
 window.latestSysInfoStats = null;
 let bootLocked = true;
+let contextMenu = null;
+
+const CONTEXT_MENU_LABELS = {
+  en: { close: "Close", openDevTools: "Open DevTools" },
+  zh_CN: { close: "关闭", openDevTools: "打开 DevTools" },
+  zh_TW: { close: "關閉", openDevTools: "開啟 DevTools" },
+  de: { close: "Schließen", openDevTools: "DevTools öffnen" },
+  es: { close: "Cerrar", openDevTools: "Abrir DevTools" },
+  ja: { close: "閉じる", openDevTools: "DevTools を開く" },
+  ko: { close: "닫기", openDevTools: "DevTools 열기" },
+  ru: { close: "Закрыть", openDevTools: "Открыть DevTools" },
+};
 
 // ==== Common Utility Functions ====
 function parseCssLength(raw, fallback) {
@@ -117,6 +129,55 @@ function cancelRaf(id) {
 function clearTimer(id) {
   if (id) window.clearTimeout(id);
   return 0;
+}
+
+function contextMenuLocale() {
+  const lang = (document.documentElement.getAttribute("lang") || "").toLowerCase();
+  if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk") || lang.startsWith("zh-hant")) return CONTEXT_MENU_LABELS.zh_TW;
+  if (lang.startsWith("zh")) return CONTEXT_MENU_LABELS.zh_CN;
+  if (lang.startsWith("de")) return CONTEXT_MENU_LABELS.de;
+  if (lang.startsWith("es")) return CONTEXT_MENU_LABELS.es;
+  if (lang.startsWith("ja")) return CONTEXT_MENU_LABELS.ja;
+  if (lang.startsWith("ko")) return CONTEXT_MENU_LABELS.ko;
+  if (lang.startsWith("ru")) return CONTEXT_MENU_LABELS.ru;
+  return CONTEXT_MENU_LABELS.en;
+}
+
+function isDesktopCastBoard() {
+  return new URLSearchParams(window.location.search).has("castboard-desktop");
+}
+
+function isDesktopDevBuild() {
+  return new URLSearchParams(window.location.search).has("castboard-devtools");
+}
+
+function hideContextMenu() {
+  if (!contextMenu || contextMenu.hidden) return false;
+  contextMenu.hidden = true;
+  return true;
+}
+
+function requestDesktopAction(action) {
+  window.location.assign(`https://castboard-action.invalid/${action}`);
+}
+
+function createContextMenu() {
+  if (!isDesktopCastBoard()) return;
+
+  const labels = contextMenuLocale();
+  contextMenu = document.createElement("div");
+  contextMenu.className = "castboard-context-menu";
+  contextMenu.hidden = true;
+  contextMenu.setAttribute("role", "menu");
+  contextMenu.innerHTML = `<button class="castboard-context-menu-item" type="button" data-action="close" role="menuitem">${labels.close}</button>${isDesktopDevBuild() ? `<button class="castboard-context-menu-item" type="button" data-action="open-devtools" role="menuitem">${labels.openDevTools}</button>` : ""}`;
+  contextMenu.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    if (!action) return;
+    hideContextMenu();
+    requestDesktopAction(action);
+  });
+  document.body.appendChild(contextMenu);
 }
 
 function callBackend(name) {
@@ -388,6 +449,7 @@ function onResize() {
 }
 
 function onPageClick() {
+  if (hideContextMenu()) return;
   if (window.currentPageName === "debug") return;
   if (typeof window.showDebugButtonTemporarily === "function") {
     window.showDebugButtonTemporarily();
@@ -398,7 +460,18 @@ function onPageClick() {
 }
 
 function preventContextMenu(event) {
+  if (!contextMenu) {
+    event.preventDefault();
+    return;
+  }
+
   event.preventDefault();
+  contextMenu.hidden = false;
+  const inset = 8;
+  const maxLeft = Math.max(inset, window.innerWidth - contextMenu.offsetWidth - inset);
+  const maxTop = Math.max(inset, window.innerHeight - contextMenu.offsetHeight - inset);
+  contextMenu.style.left = `${Math.min(Math.max(inset, event.clientX), maxLeft)}px`;
+  contextMenu.style.top = `${Math.min(Math.max(inset, event.clientY), maxTop)}px`;
 }
 
 function preventWheelZoom(event) {
@@ -449,6 +522,7 @@ function cleanupScheduledWork() {
 }
 
 function bindEvents() {
+  createContextMenu();
   window.addEventListener("resize", onResize);
   window.addEventListener("lyrics-track-change", onTrackChange);
   window.addEventListener("lyrics-progress-change", onProgressChange);
@@ -459,6 +533,9 @@ function bindEvents() {
   });
   window.addEventListener("click", onPageClick);
   window.addEventListener("contextmenu", preventContextMenu);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideContextMenu();
+  });
   window.addEventListener("wheel", preventWheelZoom, { passive: false });
   window.addEventListener("beforeunload", cleanupScheduledWork);
 }
