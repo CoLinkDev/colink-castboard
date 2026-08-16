@@ -2,6 +2,10 @@
   color-scheme: dark;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --detail-art-size: 0px;
+  --line-gap: clamp(22px, 4.2vh, 54px);
+  --active-y: 20vh;
+  --lyric-left: 0.85em;
+  --lyric-width: 85vw;
   font-size: 100px;
 }
 

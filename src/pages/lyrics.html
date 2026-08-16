@@ -21,7 +21,7 @@
         }
 
         .line.empty-lyrics {
-          transform: translate3d(0, var(--active-y), 0) scale(1.08);
+          transform: translate3d(0, var(--active-y), 0px) scale(1.08);
           opacity: 1;
           visibility: visible;
           filter: none;
@@ -248,9 +248,15 @@
           resetLyricsDom();
           if (!stage) return;
 
+          const activeY = parent.cachedActiveY;
           const empty = document.createElement("p");
           empty.className = "line is-current empty-lyrics";
           empty.textContent = noLyricsLabel();
+          if (Number.isFinite(activeY)) {
+            empty.style.transform = `translate3d(0, ${activeY}px, 0) scale(1.08)`;
+          }
+          empty.style.opacity = "1";
+          empty.style.visibility = "visible";
           stage.appendChild(empty);
         }
 
