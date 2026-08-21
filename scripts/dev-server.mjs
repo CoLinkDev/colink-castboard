@@ -53,6 +53,12 @@ const server = createServer((req, res) => {
     return
   }
 
+  if (req.url?.startsWith('/favicon.ico')) {
+    res.writeHead(204)
+    res.end()
+    return
+  }
+
   const target = safePath(req.url || '/')
   if (!target || !existsSync(target) || !statSync(target).isFile()) {
     res.writeHead(404)
