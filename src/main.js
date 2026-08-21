@@ -195,6 +195,76 @@ function callBackend(name) {
   }
 }
 
+let pageIndicatorEl = null;
+let pageIndicatorTimer = 0;
+
+function createPageIndicator() {
+  if (document.getElementById("page-indicator")) return;
+
+  pageIndicatorEl = document.createElement("div");
+  pageIndicatorEl.id = "page-indicator";
+  pageIndicatorEl.className = "page-indicator";
+  pageIndicatorEl.setAttribute("aria-label", "Page Indicator");
+
+  const pageItems = [
+    { name: "lyrics", label: "Lyrics" },
+    { name: "detail", label: "Detail" },
+    { name: "sysinfo", label: "System Info" },
+  ];
+
+  for (const item of pageItems) {
+    const dot = document.createElement("button");
+    dot.className = "page-indicator-dot";
+    dot.dataset.page = item.name;
+    dot.type = "button";
+    dot.setAttribute("aria-label", item.label);
+    dot.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (window.navManager) {
+        window.navManager.navigateTo(item.name);
+        showIndicatorTemporarily();
+      }
+    });
+    pageIndicatorEl.appendChild(dot);
+  }
+
+  document.body.appendChild(pageIndicatorEl);
+  updatePageIndicatorState(window.currentPageName || "lyrics");
+}
+
+function updatePageIndicatorState(activePageName) {
+  if (!pageIndicatorEl) return;
+  const isDebug = activePageName === "debug";
+  if (isDebug) {
+    pageIndicatorEl.style.display = "none";
+    return;
+  }
+  pageIndicatorEl.style.display = "flex";
+
+  const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
+  for (const dot of dots) {
+    dot.classList.toggle("active", dot.dataset.page === activePageName);
+  }
+}
+
+function showIndicatorTemporarily(durationMs = 2800) {
+  if (!pageIndicatorEl) return;
+  if (window.currentPageName === "debug") return;
+
+  pageIndicatorEl.classList.add("visible");
+  if (pageIndicatorTimer) {
+    clearTimeout(pageIndicatorTimer);
+    pageIndicatorTimer = 0;
+  }
+
+  pageIndicatorTimer = setTimeout(() => {
+    pageIndicatorTimer = 0;
+    if (pageIndicatorEl) {
+      pageIndicatorEl.classList.remove("visible");
+    }
+  }, durationMs);
+}
+
 // ==== Routing and Navigation Management ====
 class NavigationManager {
   constructor(pages) {
@@ -233,7 +303,7 @@ class NavigationManager {
     }
   }
 
-  navigateTo(newPageName, isTemporary = false) {
+  navigateTo(newPageName, isTemporary = false, direction = 0) {
     if (this.currentPageName === newPageName) return;
 
     if (this.isTransientActive && !isTemporary) {
@@ -256,17 +326,45 @@ class NavigationManager {
       this.pages[oldPageName].unmount();
     }
 
+    // Determine transition animation classes
+    let enterClass = "page-enter-fade";
+    let leaveClass = "page-leave-fade";
+
+    if (direction > 0) {
+      enterClass = "page-enter-next";
+      leaveClass = "page-leave-next";
+    } else if (direction < 0) {
+      enterClass = "page-enter-prev";
+      leaveClass = "page-leave-prev";
+    } else if (oldPageName && newPageName && oldPageName !== "debug" && newPageName !== "debug" && oldPageName !== "time" && newPageName !== "time") {
+      const navigable = this.getNavigablePages();
+      const fromIdx = navigable.indexOf(oldPageName);
+      const toIdx = navigable.indexOf(newPageName);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        if (toIdx > fromIdx) {
+          enterClass = "page-enter-next";
+          leaveClass = "page-leave-next";
+        } else if (toIdx < fromIdx) {
+          enterClass = "page-enter-prev";
+          leaveClass = "page-leave-prev";
+        }
+      }
+    }
+
     const div = document.createElement("div");
     div.innerHTML = config.template;
     const newPageDom = div.firstElementChild;
 
-    newPageDom.classList.add("page-enter");
+    newPageDom.classList.add(enterClass);
     root.appendChild(newPageDom);
 
     this.currentPageName = newPageName;
     window.currentPageName = newPageName;
     if (typeof window.updateDebugButtonState === "function") {
       window.updateDebugButtonState(newPageName);
+    }
+    if (typeof updatePageIndicatorState === "function") {
+      updatePageIndicatorState(newPageName);
     }
     config.mount(newPageDom);
 
@@ -278,9 +376,9 @@ class NavigationManager {
       newPageDom.getBoundingClientRect();
       for (const oldPageDom of oldPageDoms) {
         oldPageDom.classList.remove("page-active");
-        oldPageDom.classList.add("page-leave");
+        oldPageDom.classList.add(leaveClass);
       }
-      newPageDom.classList.remove("page-enter");
+      newPageDom.classList.remove(enterClass);
       newPageDom.classList.add("page-active");
     });
 
@@ -290,27 +388,50 @@ class NavigationManager {
         for (const oldPageDom of oldPageDoms) {
           oldPageDom.remove();
         }
-      }, 220);
+      }, 380);
     }
   }
 
-  toggle() {
+  getNavigablePages() {
+    return window.featureGates?.sysinfoBasic
+      ? ["lyrics", "detail", "sysinfo"]
+      : ["lyrics", "detail"];
+  }
+
+  nextPage() {
+    const basePage = this.isTransientActive ? (this.transientOriginalPage || "lyrics") : this.currentPageName;
     if (this.isTransientActive) {
-      const target = this.transientOriginalPage || "lyrics";
-      this.navigateTo(target);
+      this.cancelTransient();
+    }
+    if (this.currentPageName === "debug") return;
+    const pages = this.getNavigablePages();
+    const currentIndex = pages.indexOf(basePage);
+    if (currentIndex === -1) {
+      this.navigateTo("lyrics", false, 1);
       return;
     }
+    const nextIndex = (currentIndex + 1) % pages.length;
+    this.navigateTo(pages[nextIndex], false, 1);
+  }
 
-    if (this.currentPageName === "lyrics") {
-      this.navigateTo("detail");
-    } else if (this.currentPageName === "detail") {
-      const next = window.featureGates?.sysinfoBasic ? "sysinfo" : "lyrics";
-      this.navigateTo(next);
-    } else if (this.currentPageName === "sysinfo") {
-      this.navigateTo("lyrics");
-    } else {
-      this.navigateTo("lyrics");
+  prevPage() {
+    const basePage = this.isTransientActive ? (this.transientOriginalPage || "lyrics") : this.currentPageName;
+    if (this.isTransientActive) {
+      this.cancelTransient();
     }
+    if (this.currentPageName === "debug") return;
+    const pages = this.getNavigablePages();
+    const currentIndex = pages.indexOf(basePage);
+    if (currentIndex === -1) {
+      this.navigateTo("lyrics", false, -1);
+      return;
+    }
+    const prevIndex = (currentIndex - 1 + pages.length) % pages.length;
+    this.navigateTo(pages[prevIndex], false, -1);
+  }
+
+  toggle() {
+    this.nextPage();
   }
 
   navigateToDebug() {
@@ -356,8 +477,9 @@ class NavigationManager {
       this.navigateTo(next.pageName, true);
       this.transientTimer = window.setTimeout(() => this.restoreTransient(), next.durationMs);
     } else {
-      if (this.transientOriginalPage && this.currentPageName !== this.transientOriginalPage) {
-        this.navigateTo(this.transientOriginalPage, true);
+      const target = this.transientOriginalPage || "lyrics";
+      if (this.currentPageName !== target) {
+        this.navigateTo(target, true);
       }
       this.resetTransientState();
     }
@@ -397,6 +519,8 @@ function onTrackChange() {
   if (window.navManager && !bootLocked) {
     window.navManager.showTransient("detail", 2000);
   }
+
+  showIndicatorTemporarily(3000);
 
   if (pages[currentPageName] && typeof pages[currentPageName].onTrackChange === "function") {
     pages[currentPageName].onTrackChange();
@@ -449,15 +573,114 @@ function onResize() {
   }, 80);
 }
 
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let isTouchActive = false;
+
+let mouseStartX = 0;
+let mouseStartY = 0;
+let mouseStartTime = 0;
+let isMouseDown = false;
+
+function onTouchStart(event) {
+  if (event.touches.length !== 1) {
+    isTouchActive = false;
+    return;
+  }
+  const touch = event.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTime = Date.now();
+  isTouchActive = true;
+  showIndicatorTemporarily();
+  if (typeof window.showDebugButtonTemporarily === "function") {
+    window.showDebugButtonTemporarily();
+  }
+}
+
+function onTouchMove() {
+  showIndicatorTemporarily();
+  if (typeof window.showDebugButtonTemporarily === "function") {
+    window.showDebugButtonTemporarily();
+  }
+}
+
+function onTouchEnd(event) {
+  if (!isTouchActive) return;
+  isTouchActive = false;
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = touch.clientY - touchStartY;
+  const deltaTime = Date.now() - touchStartTime;
+
+  if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && deltaTime < 1000) {
+    if (deltaX < 0) {
+      if (window.navManager) window.navManager.nextPage();
+    } else {
+      if (window.navManager) window.navManager.prevPage();
+    }
+  }
+  showIndicatorTemporarily();
+}
+
+function onTouchCancel() {
+  isTouchActive = false;
+}
+
+function onMouseDown(event) {
+  if (event.button !== 0) return;
+  if (event.target.closest?.(".castboard-context-menu, .debug-toggle-btn, .page-indicator")) {
+    return;
+  }
+  mouseStartX = event.clientX;
+  mouseStartY = event.clientY;
+  mouseStartTime = Date.now();
+  isMouseDown = true;
+  showIndicatorTemporarily();
+  if (typeof window.showDebugButtonTemporarily === "function") {
+    window.showDebugButtonTemporarily();
+  }
+}
+
+function onMouseMove() {
+  showIndicatorTemporarily();
+  if (typeof window.showDebugButtonTemporarily === "function") {
+    window.showDebugButtonTemporarily();
+  }
+}
+
+function onMouseUp(event) {
+  if (!isMouseDown) return;
+  isMouseDown = false;
+
+  const deltaX = event.clientX - mouseStartX;
+  const deltaY = event.clientY - mouseStartY;
+  const deltaTime = Date.now() - mouseStartTime;
+
+  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && deltaTime < 800) {
+    if (deltaX < 0) {
+      if (window.navManager) window.navManager.nextPage();
+    } else {
+      if (window.navManager) window.navManager.prevPage();
+    }
+  }
+  showIndicatorTemporarily();
+}
+
 function onPageClick() {
   if (hideContextMenu()) return;
   if (window.currentPageName === "debug") return;
   if (typeof window.showDebugButtonTemporarily === "function") {
     window.showDebugButtonTemporarily();
   }
-  if (window.navManager) {
-    window.navManager.toggle();
+  if (window.currentPageName === "time" && window.navManager) {
+    window.navManager.restoreTransient();
+    return;
   }
+  showIndicatorTemporarily();
 }
 
 function preventContextMenu(event) {
@@ -511,6 +734,10 @@ function stopTimeScheduler() {
 
 function cleanupScheduledWork() {
   resizeTimer = clearTimer(resizeTimer);
+  if (pageIndicatorTimer) {
+    clearTimeout(pageIndicatorTimer);
+    pageIndicatorTimer = 0;
+  }
   stopTimeScheduler();
   if (window.navManager) {
     window.navManager.destroy();
@@ -524,6 +751,7 @@ function cleanupScheduledWork() {
 
 function bindEvents() {
   createContextMenu();
+  createPageIndicator();
   window.addEventListener("resize", onResize);
   window.addEventListener("lyrics-track-change", onTrackChange);
   window.addEventListener("lyrics-progress-change", onProgressChange);
@@ -536,8 +764,22 @@ function bindEvents() {
   window.addEventListener("contextmenu", preventContextMenu);
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hideContextMenu();
+    if (event.key === "ArrowLeft") {
+      if (window.navManager) window.navManager.prevPage();
+      showIndicatorTemporarily();
+    } else if (event.key === "ArrowRight") {
+      if (window.navManager) window.navManager.nextPage();
+      showIndicatorTemporarily();
+    }
   });
   window.addEventListener("wheel", preventWheelZoom, { passive: false });
+  window.addEventListener("touchstart", onTouchStart, { passive: true });
+  window.addEventListener("touchmove", onTouchMove, { passive: true });
+  window.addEventListener("touchend", onTouchEnd, { passive: true });
+  window.addEventListener("touchcancel", onTouchCancel, { passive: true });
+  window.addEventListener("mousedown", onMouseDown);
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
   window.addEventListener("beforeunload", cleanupScheduledWork);
 }
 
