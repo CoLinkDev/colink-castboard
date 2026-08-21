@@ -320,10 +320,9 @@ class NavigationManager {
     if (this.pageCleanupTimer) {
       window.clearTimeout(this.pageCleanupTimer);
       this.pageCleanupTimer = 0;
-    }
-
-    if (oldPageName && this.pages[oldPageName] && typeof this.pages[oldPageName].unmount === "function") {
-      this.pages[oldPageName].unmount();
+      for (const oldPageDom of oldPageDoms) {
+        oldPageDom.remove();
+      }
     }
 
     // Determine transition animation classes
@@ -373,22 +372,39 @@ class NavigationManager {
     }
 
     requestAnimationFrame(() => {
-      newPageDom.getBoundingClientRect();
-      for (const oldPageDom of oldPageDoms) {
-        oldPageDom.classList.remove("page-active");
-        oldPageDom.classList.add(leaveClass);
-      }
-      newPageDom.classList.remove(enterClass);
-      newPageDom.classList.add("page-active");
+      requestAnimationFrame(() => {
+        for (const oldPageDom of oldPageDoms) {
+          oldPageDom.classList.remove("page-active");
+          oldPageDom.classList.add(leaveClass);
+        }
+        newPageDom.classList.remove(enterClass);
+        newPageDom.classList.add("page-active");
+      });
     });
 
     if (oldPageDoms.length > 0) {
-      this.pageCleanupTimer = window.setTimeout(() => {
-        this.pageCleanupTimer = 0;
+      let cleaned = false;
+      const cleanupOldPages = () => {
+        if (cleaned) return;
+        cleaned = true;
+        if (this.pageCleanupTimer) {
+          window.clearTimeout(this.pageCleanupTimer);
+          this.pageCleanupTimer = 0;
+        }
+        if (oldPageName && this.pages[oldPageName] && typeof this.pages[oldPageName].unmount === "function") {
+          this.pages[oldPageName].unmount();
+        }
         for (const oldPageDom of oldPageDoms) {
           oldPageDom.remove();
         }
-      }, 380);
+      };
+
+      const primaryOldDom = oldPageDoms[0];
+      if (primaryOldDom) {
+        primaryOldDom.addEventListener("transitionend", cleanupOldPages, { once: true });
+      }
+
+      this.pageCleanupTimer = window.setTimeout(cleanupOldPages, 600);
     }
   }
 
