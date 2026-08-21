@@ -175,6 +175,32 @@
         let detailHideTimer = 0;
         let lastElapsedSecond = -1;
 
+        const UNKNOWN_TRACK_LABELS = {
+          en: { title: "Unknown Song", author: "Unknown Artist" },
+          zh_CN: { title: "未知歌曲", author: "未知艺术家" },
+          zh_TW: { title: "未知歌曲", author: "未知藝術家" },
+          de: { title: "Unbekannter Titel", author: "Unbekannter Künstler" },
+          es: { title: "Canción desconocida", author: "Artista desconocido" },
+          ja: { title: "不明な曲", author: "不明なアーティスト" },
+          ko: { title: "알 수 없는 노래", author: "알 수 없는 아티스트" },
+          ru: { title: "Неизвестная композиция", author: "Неизвестный исполнитель" },
+        };
+
+        function unknownTrackLabels() {
+          const lang = (parent.document.documentElement.getAttribute("lang") || "").toLowerCase();
+
+          if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk") || lang.startsWith("zh-hant")) {
+            return UNKNOWN_TRACK_LABELS.zh_TW;
+          }
+          if (lang.startsWith("zh")) return UNKNOWN_TRACK_LABELS.zh_CN;
+          if (lang.startsWith("de")) return UNKNOWN_TRACK_LABELS.de;
+          if (lang.startsWith("es")) return UNKNOWN_TRACK_LABELS.es;
+          if (lang.startsWith("ja")) return UNKNOWN_TRACK_LABELS.ja;
+          if (lang.startsWith("ko")) return UNKNOWN_TRACK_LABELS.ko;
+          if (lang.startsWith("ru")) return UNKNOWN_TRACK_LABELS.ru;
+          return UNKNOWN_TRACK_LABELS.en;
+        }
+
         function titleVisualLength(value) {
           let length = 0;
           for (const char of value.trim()) {
@@ -215,8 +241,9 @@
 
         function renderDetailMetadata() {
           if (!detailTitle) return;
-          const title = parent.TRACK_INFO.title || "Unknown Song";
-          const author = parent.TRACK_INFO.author || "Unknown Artist";
+          const labels = unknownTrackLabels();
+          const title = parent.TRACK_INFO.title || labels.title;
+          const author = parent.TRACK_INFO.author || labels.author;
           const album = parent.TRACK_INFO.album || "";
           const cover = parent.TRACK_INFO.cover || "";
 
