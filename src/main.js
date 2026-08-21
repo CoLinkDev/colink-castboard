@@ -304,7 +304,8 @@ class NavigationManager {
     if (this.currentPageName === "lyrics") {
       this.navigateTo("detail");
     } else if (this.currentPageName === "detail") {
-      this.navigateTo("sysinfo");
+      const next = window.featureGates?.sysinfoBasic ? "sysinfo" : "lyrics";
+      this.navigateTo(next);
     } else if (this.currentPageName === "sysinfo") {
       this.navigateTo("lyrics");
     } else {
@@ -581,7 +582,10 @@ function boot() {
 
   const ready = document.fonts?.ready ?? Promise.resolve();
   ready.then(() => {
-    const initialPage = window.navManager.getStoredPage();
+    const stored = window.navManager.getStoredPage();
+    const initialPage = (stored === "sysinfo" && !window.featureGates?.sysinfoBasic)
+      ? "lyrics"
+      : stored;
     window.navManager.navigateTo(initialPage);
   });
 }

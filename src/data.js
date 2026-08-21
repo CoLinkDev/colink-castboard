@@ -1,3 +1,23 @@
+// Semver comparison: returns negative / 0 / positive
+function compareSemver(a, b) {
+  const pa = String(a || "0.0.0").split(".").map(Number);
+  const pb = String(b || "0.0.0").split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+const _peerBusinessVersion = new URLSearchParams(window.location.search).get("peerBusinessVersion") || "";
+
+const featureGates = {
+  sysinfoBasic: compareSemver(_peerBusinessVersion, "1.1.0") >= 0,
+  sysinfoNetDisk: compareSemver(_peerBusinessVersion, "1.2.0") >= 0,
+};
+
+window.featureGates = featureGates;
+
 const LYRICS = [];
 const TRACK_INFO = {
   title: "",
@@ -336,15 +356,15 @@ window.handleCoLinkBusinessEvent = function (type, payload) {
       });
       break;
     case "sysinfo.v1.stats":
-      if (typeof window.handleSysInfoStats === "function") {
+      if (featureGates.sysinfoBasic && typeof window.handleSysInfoStats === "function") {
         window.handleSysInfoStats({
           cpu: payload?.cpu,
           mem: payload?.mem,
           gpu: payload?.gpu,
-          netUp: payload?.net_up ?? payload?.netUp,
-          netDown: payload?.net_down ?? payload?.netDown,
-          diskRead: payload?.disk_read ?? payload?.diskRead,
-          diskWrite: payload?.disk_write ?? payload?.diskWrite,
+          netUp: featureGates.sysinfoNetDisk ? (payload?.net_up ?? payload?.netUp) : undefined,
+          netDown: featureGates.sysinfoNetDisk ? (payload?.net_down ?? payload?.netDown) : undefined,
+          diskRead: featureGates.sysinfoNetDisk ? (payload?.disk_read ?? payload?.diskRead) : undefined,
+          diskWrite: featureGates.sysinfoNetDisk ? (payload?.disk_write ?? payload?.diskWrite) : undefined,
         });
       }
       break;
