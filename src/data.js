@@ -19,6 +19,7 @@ const LYRICS_LINES_CHANGE_EVENT = "lyrics-lines-change";
 const LYRICS_TRACK_CHANGE_EVENT = "lyrics-track-change";
 const LYRICS_PROGRESS_CHANGE_EVENT = "lyrics-progress-change";
 const DEBUG_OVERLAY_ENABLED = window.castBoardHost.config.debug;
+const { formatDuration } = window.castBoardUtils;
 window.debugEvents = [];
 
 function updateDebugOverlay(event, data) {
@@ -69,33 +70,6 @@ function normalizeTrackText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function hasTrackMetadata(data) {
-  return !!data && (
-    normalizeTrackText(data.title) !== "" ||
-    normalizeTrackText(data.author) !== "" ||
-    normalizeTrackText(data.album) !== "" ||
-    normalizeTrackText(data.cover) !== ""
-  );
-}
-
-function hasTrackFields(data) {
-  return !!data && (
-    typeof data.title === "string" ||
-    typeof data.author === "string" ||
-    typeof data.album === "string" ||
-    typeof data.source === "string" ||
-    typeof data.cover === "string" ||
-    typeof data.durationHuman === "string"
-  );
-}
-
-function isEmptyTrack(data) {
-  return !!data &&
-    !hasTrackMetadata(data) &&
-    typeof data.duration === "number" &&
-    data.duration <= 0;
-}
-
 function clearLyricsData() {
   if (LYRICS.length === 0) {
     return false;
@@ -127,7 +101,7 @@ function toLyricLine(item) {
     return null;
   }
   return {
-    time: item.time,
+    time: item.time / 1000,
     text: item.text,
   };
 }
@@ -239,18 +213,22 @@ function onPlayerProgress(data) {
   }
 }
 
-function onTrack(data) {
-  if (!data) return;
-  let trackChanged = hasTrackFields(data) ? updateTrackInfo(data) : false;
+function onTrack(payload) {
+  const track = toDisplayTrack(payload);
+  let trackChanged = updateTrackInfo(track ?? emptyTrack());
   let linesChanged = false;
   let progressChanged = false;
 
-  if (typeof data.duration === "number" && data.duration !== duration) {
-    duration = data.duration;
+  if (track && track.duration !== duration) {
+    duration = track.duration;
     trackChanged = true;
   }
 
-  if (isEmptyTrack(data)) {
+  if (!track) {
+    if (duration !== 0) {
+      duration = 0;
+      trackChanged = true;
+    }
     stopProgressInterpolation();
     progressPaused = true;
     progressAnchorPosition = 0;
@@ -271,24 +249,53 @@ function onTrack(data) {
   if (progressChanged) notifyLyricsProgressChanged();
 }
 
-window.addEventListener("beforeunload", stopProgressInterpolation);
-
-function handleEvent(event, data) {
-  switch (event) {
-    case "Lyric":
-      onLyric(data);
-      break;
-    case "PlayerProgress":
-      onPlayerProgress(data);
-      break;
-    case "Track":
-      onTrack(data);
-      break;
+function toDisplayTrack(payload) {
+  if (!payload || typeof payload.trackId !== "string" || payload.trackId.trim() === "") {
+    return null;
   }
-  updateDebugOverlay(event, data);
+
+  const parsedDuration = Number(payload.duration || 0);
+  const durationMilliseconds = Number.isFinite(parsedDuration) ? Math.max(0, parsedDuration) : 0;
+  return {
+    title: payload.title || "",
+    author: Array.isArray(payload.artists) ? payload.artists.join(", ") : "",
+    album: payload.album || "",
+    source: payload.source || "",
+    cover: payload.coverData ? `data:image/png;base64,${payload.coverData}` : payload.coverUrl || "",
+    duration: Math.max(0, Math.floor(durationMilliseconds / 1000)),
+    durationHuman: formatDuration(durationMilliseconds),
+  };
 }
 
-window.castBoardHost.registerHandlers({ onMusicEvent: handleEvent });
+function emptyTrack() {
+  return {
+    title: "",
+    author: "",
+    album: "",
+    source: "",
+    cover: "",
+    durationHuman: "0:00",
+  };
+}
+
+window.addEventListener("beforeunload", stopProgressInterpolation);
+
+function handleMusicBusinessEvent(type, payload) {
+  switch (type) {
+    case "music.v1.lyric":
+      onLyric(payload);
+      break;
+    case "music.v1.progress":
+      onPlayerProgress(payload);
+      break;
+    case "music.v1.track":
+      onTrack(payload);
+      break;
+  }
+  updateDebugOverlay(type, payload);
+}
+
+window.castBoardHost.registerHandlers({ onMusicBusinessEvent: handleMusicBusinessEvent });
 
 function _calcActiveIndex(t) {
   if (LYRICS.length === 0 || !Number.isFinite(t)) return 0;
