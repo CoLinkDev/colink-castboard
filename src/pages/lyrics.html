@@ -212,30 +212,8 @@
           deezer: "icons/deezer.svg",
           kugou: "icons/kugou.svg",
         };
-        const NO_LYRICS_LABELS = {
-          en: "No lyrics available",
-          zh_CN: "暂无歌词",
-          zh_TW: "暫無歌詞",
-          de: "Keine Liedtexte verfügbar",
-          es: "No hay letras disponibles",
-          ja: "歌詞はありません",
-          ko: "가사가 없습니다",
-          ru: "Нет текста песни",
-        };
-
         function noLyricsLabel() {
-          const lang = (parent.document.documentElement.getAttribute("lang") || "").toLowerCase();
-
-          if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk") || lang.startsWith("zh-hant")) {
-            return NO_LYRICS_LABELS.zh_TW;
-          }
-          if (lang.startsWith("zh")) return NO_LYRICS_LABELS.zh_CN;
-          if (lang.startsWith("de")) return NO_LYRICS_LABELS.de;
-          if (lang.startsWith("es")) return NO_LYRICS_LABELS.es;
-          if (lang.startsWith("ja")) return NO_LYRICS_LABELS.ja;
-          if (lang.startsWith("ko")) return NO_LYRICS_LABELS.ko;
-          if (lang.startsWith("ru")) return NO_LYRICS_LABELS.ru;
-          return NO_LYRICS_LABELS.en;
+          return parent.castBoardI18n.t("lyrics.noLyrics");
         }
 
         function resetLyricsDom() {

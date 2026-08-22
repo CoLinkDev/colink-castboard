@@ -14,17 +14,6 @@ const {
   parseCssLength,
 } = window.castBoardUtils;
 
-const CONTEXT_MENU_LABELS = {
-  en: { close: "Close", openDevTools: "Open DevTools" },
-  zh_CN: { close: "关闭", openDevTools: "打开 DevTools" },
-  zh_TW: { close: "關閉", openDevTools: "開啟 DevTools" },
-  de: { close: "Schließen", openDevTools: "DevTools öffnen" },
-  es: { close: "Cerrar", openDevTools: "Abrir DevTools" },
-  ja: { close: "閉じる", openDevTools: "DevTools を開く" },
-  ko: { close: "닫기", openDevTools: "DevTools 열기" },
-  ru: { close: "Закрыть", openDevTools: "Открыть DevTools" },
-};
-
 function cacheLayoutMetrics() {
   const root = getComputedStyle(document.documentElement);
   cachedGap = parseCssLength(root.getPropertyValue("--line-gap"), 36);
@@ -34,18 +23,6 @@ function cacheLayoutMetrics() {
   const maxByHeight = window.innerHeight * 0.88;
   const artSize = Math.min(clamped, maxByHeight);
   document.documentElement.style.setProperty("--detail-art-size", artSize + "px");
-}
-
-function contextMenuLocale() {
-  const lang = (document.documentElement.getAttribute("lang") || "").toLowerCase();
-  if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk") || lang.startsWith("zh-hant")) return CONTEXT_MENU_LABELS.zh_TW;
-  if (lang.startsWith("zh")) return CONTEXT_MENU_LABELS.zh_CN;
-  if (lang.startsWith("de")) return CONTEXT_MENU_LABELS.de;
-  if (lang.startsWith("es")) return CONTEXT_MENU_LABELS.es;
-  if (lang.startsWith("ja")) return CONTEXT_MENU_LABELS.ja;
-  if (lang.startsWith("ko")) return CONTEXT_MENU_LABELS.ko;
-  if (lang.startsWith("ru")) return CONTEXT_MENU_LABELS.ru;
-  return CONTEXT_MENU_LABELS.en;
 }
 
 function isDesktopCastBoard() {
@@ -65,7 +42,7 @@ function hideContextMenu() {
 function createContextMenu() {
   if (!isDesktopCastBoard()) return;
 
-  const labels = contextMenuLocale();
+  const labels = window.castBoardI18n.messages("contextMenu");
   contextMenu = document.createElement("div");
   contextMenu.className = "castboard-context-menu";
   contextMenu.hidden = true;

@@ -402,108 +402,6 @@
       (function() {
         let mountedContainer = null;
 
-        const translations = {
-          en: {
-            cpuDesc: "Processor",
-            memDesc: "Memory",
-            gpuDesc: "Graphics",
-            netDownDesc: "Download",
-            netUpDesc: "Upload",
-            diskReadDesc: "Read",
-            diskWriteDesc: "Write"
-          },
-          zh_CN: {
-            cpuDesc: "处理器",
-            memDesc: "内存",
-            gpuDesc: "图形",
-            netDownDesc: "下载",
-            netUpDesc: "上传",
-            diskReadDesc: "读取",
-            diskWriteDesc: "写入"
-          },
-          zh_TW: {
-            cpuDesc: "處理器",
-            memDesc: "記憶體",
-            gpuDesc: "圖形",
-            netDownDesc: "下載",
-            netUpDesc: "上傳",
-            diskReadDesc: "讀取",
-            diskWriteDesc: "寫入"
-          },
-          de: {
-            cpuDesc: "Prozessor",
-            memDesc: "Speicher",
-            gpuDesc: "Grafik",
-            netDownDesc: "Download",
-            netUpDesc: "Upload",
-            diskReadDesc: "Lesen",
-            diskWriteDesc: "Schreiben"
-          },
-          es: {
-            cpuDesc: "Procesador",
-            memDesc: "Memoria",
-            gpuDesc: "Gráficos",
-            netDownDesc: "Descarga",
-            netUpDesc: "Subida",
-            diskReadDesc: "Lectura",
-            diskWriteDesc: "Escritura"
-          },
-          ja: {
-            cpuDesc: "プロセッサ",
-            memDesc: "メモリ",
-            gpuDesc: "グラフィックス",
-            netDownDesc: "ダウンロード",
-            netUpDesc: "アップロード",
-            diskReadDesc: "読み取り",
-            diskWriteDesc: "書き込み"
-          },
-          ko: {
-            cpuDesc: "프로세서",
-            memDesc: "메모리",
-            gpuDesc: "그래픽",
-            netDownDesc: "다운로드",
-            netUpDesc: "업로드",
-            diskReadDesc: "읽기",
-            diskWriteDesc: "쓰기"
-          },
-          ru: {
-            cpuDesc: "Процессор",
-            memDesc: "Память",
-            gpuDesc: "Графика",
-            netDownDesc: "Загрузка",
-            netUpDesc: "Отдача",
-            diskReadDesc: "Чтение",
-            diskWriteDesc: "Запись"
-          }
-        };
-
-        function getLocale() {
-          const lang = (document.documentElement.getAttribute("lang") || "").toLowerCase();
-          
-          if (lang.startsWith("zh-tw") || lang.startsWith("zh-hk") || lang.startsWith("zh-hant")) {
-            return translations.zh_TW;
-          }
-          if (lang.startsWith("zh")) {
-            return translations.zh_CN;
-          }
-          if (lang.startsWith("de")) {
-            return translations.de;
-          }
-          if (lang.startsWith("es")) {
-            return translations.es;
-          }
-          if (lang.startsWith("ja")) {
-            return translations.ja;
-          }
-          if (lang.startsWith("ko")) {
-            return translations.ko;
-          }
-          if (lang.startsWith("ru")) {
-            return translations.ru;
-          }
-          return translations.en;
-        }
-
         function normalize(value) {
           if (value === null || value === undefined) return null;
           const parsed = Number(value);
@@ -512,7 +410,7 @@
         }
 
         function localizeUI(container) {
-          const t = getLocale();
+          const t = parent.castBoardI18n.messages("sysinfo");
           
           // Localize descriptions
           const cpuDesc = container.querySelector(`[data-key="cpu"] .metric-desc`);
