@@ -101,10 +101,6 @@
     window.location.assign(`https://castboard-action.invalid/${action}`);
   }
 
-  function requestLegacyCachedState() {
-    window.pywebview?.api?.onReady?.();
-  }
-
   window.castBoardHost = Object.freeze({
     config,
     featureGates,
@@ -118,5 +114,4 @@
   if (language) {
     document.documentElement.setAttribute("lang", language);
   }
-  window.addEventListener("pywebviewready", requestLegacyCachedState);
 })();
