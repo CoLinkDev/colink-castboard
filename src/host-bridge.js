@@ -2,6 +2,14 @@
 (() => {
   const params = new URLSearchParams(window.location.search);
   const language = params.get("lang") || "";
+  let ipc = window.castboardIPC;
+
+  if (!ipc && typeof window.castBoardUtils?.createMockIPC === "function") {
+    ipc = window.castBoardUtils.createMockIPC();
+    window.castboardIPC = ipc;
+    log("host-bridge", "mock-ipc-created");
+  }
+
   const peerBusinessVersion = params.get("peerBusinessVersion") || "";
   const config = Object.freeze({
     language,
@@ -13,7 +21,6 @@
   });
   const handlers = {};
   const hostReadyListeners = new Set();
-  const ipc = window.castboardIPC;
   let hostReady = false;
   let pageReadySent = false;
 

@@ -132,14 +132,142 @@
     return 0;
   }
 
+  class MockIPC {
+    constructor() {
+      this.subscribers = new Set();
+      this.isMock = true;
+      this._sysInfoTimer = null;
+    }
+
+    subscribe(callback) {
+      if (typeof callback !== "function") return () => {};
+      this.subscribers.add(callback);
+      return () => this.subscribers.delete(callback);
+    }
+
+    send(message) {
+      for (const subscriber of this.subscribers) {
+        try {
+          subscriber(message);
+        } catch (error) {
+          console.error("[MockIPC] subscriber error:", error);
+        }
+      }
+    }
+
+    sendEvent(type, payload = {}) {
+      this.send({
+        channel: "castboard",
+        kind: "event",
+        type,
+        payload,
+      });
+    }
+
+    sendBusinessEvent(type, payload) {
+      this.send({
+        channel: "castboard",
+        kind: "event",
+        type: "business",
+        payload: { type, payload },
+      });
+    }
+
+    request({ type, payload }) {
+      log("mock-ipc", "request-received", { type, payload });
+      switch (type) {
+        case "castboard.ready":
+          setTimeout(() => {
+            this.sendEvent("host.ready");
+          }, 80);
+          return Promise.resolve({ ok: true });
+        case "castboard.close":
+        case "castboard.openDevTools":
+        case "castboard.sysinfo.alive":
+          return Promise.resolve({ ok: true });
+        default:
+          return Promise.resolve({ ok: true });
+      }
+    }
+
+    mockTrack(track = {}) {
+      this.sendBusinessEvent("music.v1.track", {
+        trackId: track.trackId || "mock-track-1",
+        title: track.title || "Sample Song Title",
+        artists: track.artists || ["Sample Artist"],
+        album: track.album || "Sample Album",
+        source: track.source || "spotify",
+        coverUrl: track.coverUrl || "",
+        duration: track.duration != null ? track.duration : 210000,
+        ...track,
+      });
+    }
+
+    mockLyric(lines = [], translatedLines = []) {
+      this.sendBusinessEvent("music.v1.lyric", {
+        lines: lines.length > 0 ? lines : [
+          { time: 0, text: "Line 1 of sample lyrics" },
+          { time: 5000, text: "Line 2 of sample lyrics" },
+          { time: 10000, text: "Line 3 of sample lyrics" },
+          { time: 15000, text: "Line 4 of sample lyrics" },
+        ],
+        translatedLines: translatedLines.length > 0 ? translatedLines : [
+          { time: 0, text: "示例歌词第 1 行" },
+          { time: 5000, text: "示例歌词第 2 行" },
+          { time: 10000, text: "示例歌词第 3 行" },
+          { time: 15000, text: "示例歌词第 4 行" },
+        ],
+      });
+    }
+
+    mockProgress(progressMs = 0, paused = false) {
+      this.sendBusinessEvent("music.v1.progress", {
+        progress: progressMs,
+        paused,
+      });
+    }
+
+    mockSysInfo(stats = {}) {
+      this.sendBusinessEvent("sysinfo.v1.stats", {
+        cpu: stats.cpu != null ? stats.cpu : Math.floor(Math.random() * 50 + 20),
+        mem: stats.mem != null ? stats.mem : 56,
+        gpu: stats.gpu != null ? stats.gpu : 30,
+        net_up: stats.net_up != null ? stats.net_up : 1024 * 300,
+        net_down: stats.net_down != null ? stats.net_down : 1024 * 1024 * 4.2,
+        disk_read: stats.disk_read != null ? stats.disk_read : 1024 * 1024 * 18.5,
+        disk_write: stats.disk_write != null ? stats.disk_write : 1024 * 512,
+        ...stats,
+      });
+    }
+
+    startMockSysInfoTicker(intervalMs = 2000) {
+      if (this._sysInfoTimer) clearInterval(this._sysInfoTimer);
+      this.mockSysInfo();
+      this._sysInfoTimer = setInterval(() => this.mockSysInfo(), intervalMs);
+    }
+
+    stopMockSysInfoTicker() {
+      if (this._sysInfoTimer) {
+        clearInterval(this._sysInfoTimer);
+        this._sysInfoTimer = null;
+      }
+    }
+  }
+
+  function createMockIPC() {
+    return new MockIPC();
+  }
+
   window.castBoardUtils = Object.freeze({
     cancelRaf,
     clampUnit,
     clearTimer,
     compareSemver,
+    createMockIPC,
     cssFunctionArgs,
     formatDuration,
     formatSeconds,
+    MockIPC,
     normalizeRate,
     parseCssLength,
     readCssNumber,
