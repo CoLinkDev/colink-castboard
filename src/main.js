@@ -54,18 +54,27 @@ let pageIndicatorEl = null;
 let pageIndicatorTimer = 0;
 
 function createPageIndicator() {
-  if (document.getElementById("page-indicator")) return;
+  if (!pageIndicatorEl) {
+    pageIndicatorEl = document.createElement("div");
+    pageIndicatorEl.id = "page-indicator";
+    pageIndicatorEl.className = "page-indicator";
+    pageIndicatorEl.setAttribute("aria-label", "Page Indicator");
+    document.body.appendChild(pageIndicatorEl);
+  }
 
-  pageIndicatorEl = document.createElement("div");
-  pageIndicatorEl.id = "page-indicator";
-  pageIndicatorEl.className = "page-indicator";
-  pageIndicatorEl.setAttribute("aria-label", "Page Indicator");
+  pageIndicatorEl.innerHTML = "";
 
-  const pageItems = [
+  const allPageItems = [
     { name: "lyrics", label: "Lyrics" },
     { name: "detail", label: "Detail" },
     { name: "sysinfo", label: "System Info" },
   ];
+
+  const navigable = window.navManager
+    ? window.navManager.getNavigablePages()
+    : (window.castBoardHost?.featureGates?.sysinfoBasic ? ["lyrics", "detail", "sysinfo"] : ["lyrics", "detail"]);
+
+  const pageItems = allPageItems.filter((item) => navigable.includes(item.name));
 
   for (const item of pageItems) {
     const dot = document.createElement("button");
@@ -83,15 +92,19 @@ function createPageIndicator() {
     pageIndicatorEl.appendChild(dot);
   }
 
-  document.body.appendChild(pageIndicatorEl);
   updatePageIndicatorState(window.currentPageName || "lyrics");
 }
 
 function updatePageIndicatorState(activePageName) {
   if (!pageIndicatorEl) return;
-  pageIndicatorEl.style.display = "flex";
 
   const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
+  if (dots.length <= 1) {
+    pageIndicatorEl.style.display = "none";
+    return;
+  }
+  pageIndicatorEl.style.display = "flex";
+
   for (const dot of dots) {
     dot.classList.toggle("active", dot.dataset.page === activePageName);
   }
