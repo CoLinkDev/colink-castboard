@@ -74,7 +74,11 @@
           const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
           try {
             dateEl.textContent = now.toLocaleDateString(lang, dateOptions);
-          } catch (e) {
+          } catch (error) {
+            parent.window.castBoardUtils.log("time", "date-localization-failed", {
+              language: lang,
+              error: String(error),
+            });
             dateEl.textContent = now.toLocaleDateString('zh-CN', dateOptions);
           }
         }

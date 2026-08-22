@@ -12,7 +12,10 @@
     sysinfoBasic: compareSemver(peerBusinessVersion, "1.1.0") >= 0,
   });
   const handlers = {};
+  const hostReadyListeners = new Set();
   const ipc = window.castboardIPC;
+  let hostReady = false;
+  let pageReadySent = false;
 
   if (!ipc) {
     throw new Error("CastBoard IPC is unavailable");
@@ -23,12 +26,85 @@
     log("host-bridge", "host-handlers-registered", { handlers: Object.keys(nextHandlers) });
   }
 
+  function notifyPageReady() {
+    if (pageReadySent) {
+      return Promise.resolve();
+    }
+
+    pageReadySent = true;
+    return requestHost("castboard.ready", {}).catch((error) => {
+      pageReadySent = false;
+      throw error;
+    });
+  }
+
+  function requestHost(type, payload) {
+    log("host-bridge", "request-sent", { type, payload });
+    try {
+      return Promise.resolve(ipc.request({ type, payload })).then(
+        (result) => {
+          log("host-bridge", "response-received", { type, result });
+          return result;
+        },
+        (error) => {
+          log("host-bridge", "request-failed", { type, error: String(error) });
+          throw error;
+        },
+      );
+    } catch (error) {
+      log("host-bridge", "request-failed", { type, error: String(error) });
+      return Promise.reject(error);
+    }
+  }
+
+  function notifyHostReadyListener(listener) {
+    try {
+      listener();
+    } catch (error) {
+      log("host-bridge", "host-ready-listener-failed", { error: String(error) });
+    }
+  }
+
+  function onHostReady(listener) {
+    if (typeof listener !== "function") {
+      throw new TypeError("CastBoard host-ready listener must be a function");
+    }
+    if (hostReady) {
+      notifyHostReadyListener(listener);
+      return () => {};
+    }
+    hostReadyListeners.add(listener);
+    return () => hostReadyListeners.delete(listener);
+  }
+
+  function markHostReady() {
+    if (hostReady) {
+      return;
+    }
+
+    hostReady = true;
+    log("host-bridge", "host-ready-received");
+    for (const listener of hostReadyListeners) {
+      notifyHostReadyListener(listener);
+    }
+    hostReadyListeners.clear();
+    window.dispatchEvent(new Event("castboard-host-ready"));
+  }
+
   function dispatchMusicBusinessEvent(type, payload) {
-    handlers.onMusicBusinessEvent?.(type, payload);
+    try {
+      handlers.onMusicBusinessEvent?.(type, payload);
+    } catch (error) {
+      log("host-bridge", "music-event-handler-failed", { type, error: String(error) });
+    }
   }
 
   function dispatchSysInfoStats(payload) {
-    handlers.onSysInfoStats?.(payload);
+    try {
+      handlers.onSysInfoStats?.(payload);
+    } catch (error) {
+      log("host-bridge", "sysinfo-event-handler-failed", { error: String(error) });
+    }
   }
 
   function handleBusinessEvent(type, payload) {
@@ -48,41 +124,45 @@
   }
 
   function close() {
-    log("host-bridge", "close-requested");
-    return ipc.request({ type: "castboard.close", payload: {} });
+    return requestHost("castboard.close", {});
   }
 
   function openDevTools() {
-    log("host-bridge", "open-devtools-requested");
-    return ipc.request({ type: "castboard.openDevTools", payload: {} });
+    return requestHost("castboard.openDevTools", {});
   }
 
   window.castBoardHost = Object.freeze({
     config,
     featureGates,
     registerHandlers,
+    notifyPageReady,
+    onHostReady,
+    isHostReady: () => hostReady,
     close,
     openDevTools,
   });
   ipc.subscribe((message) => {
-    if (
-      message?.channel !== "castboard" ||
-      message.kind !== "event" ||
-      message.type !== "business"
-    ) {
+    log("host-bridge", "event-received", {
+      channel: message?.channel,
+      kind: message?.kind,
+      type: message?.type,
+      payload: message?.payload,
+    });
+    if (message?.channel !== "castboard" || message.kind !== "event") {
+      log("host-bridge", "event-ignored", { reason: "invalid-envelope" });
       return;
     }
-    handleBusinessEvent(message.payload?.type, message.payload?.payload);
+    if (message.type === "host.ready") {
+      markHostReady();
+      return;
+    }
+    if (message.type === "business") {
+      handleBusinessEvent(message.payload?.type, message.payload?.payload);
+    }
   });
 
   if (language) {
     document.documentElement.setAttribute("lang", language);
   }
   log("host-bridge", "host-bridge-ready", { config, featureGates });
-
-  window.addEventListener("load", () => {
-    ipc.request({ type: "castboard.ready", payload: {} }).catch((error) => {
-      log("host-bridge", "ready-request-failed", { error: String(error) });
-    });
-  }, { once: true });
 })();

@@ -38,9 +38,13 @@ function createContextMenu() {
     if (!action) return;
     hideContextMenu();
     if (action === "close") {
-      window.castBoardHost.close();
+      window.castBoardHost.close().catch((error) => {
+        log("app", "close-request-failed", { error: String(error) });
+      });
     } else if (action === "open-devtools") {
-      window.castBoardHost.openDevTools();
+      window.castBoardHost.openDevTools().catch((error) => {
+        log("app", "open-devtools-request-failed", { error: String(error) });
+      });
     }
   });
   document.body.appendChild(contextMenu);
@@ -133,7 +137,8 @@ class NavigationManager {
       const legacyDetail = window.localStorage.getItem(this.legacyStorageKey);
       if (legacyDetail === "1") return "detail";
       return "lyrics";
-    } catch {
+    } catch (error) {
+      log("navigation", "stored-page-read-failed", { error: String(error) });
       return "lyrics";
     }
   }
@@ -142,8 +147,8 @@ class NavigationManager {
     try {
       window.localStorage.setItem(this.storageKey, pageName);
       window.localStorage.setItem(this.legacyStorageKey, pageName === "detail" ? "1" : "0");
-    } catch {
-      // Ignore if storage is unavailable
+    } catch (error) {
+      log("navigation", "stored-page-write-failed", { error: String(error) });
     }
   }
 
@@ -654,5 +659,8 @@ function boot() {
       ? "lyrics"
       : stored;
     window.navManager.navigateTo(initialPage);
+    window.castBoardHost.notifyPageReady().catch((error) => {
+      log("app", "page-ready-request-failed", { error: String(error) });
+    });
   });
 }

@@ -18,7 +18,8 @@
     if (payload === undefined) return null;
     try {
       return JSON.parse(JSON.stringify(payload));
-    } catch {
+    } catch (error) {
+      console.warn("[CastBoard][log] payload-copy-failed", { error: String(error) });
       return String(payload);
     }
   }
