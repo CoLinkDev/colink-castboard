@@ -203,6 +203,23 @@ function updatePageIndicatorState(activePageName) {
   pageIndicatorEl.classList.toggle("expanded", shouldExpand);
 }
 
+function isIndicatorVisible() {
+  return Boolean(pageIndicatorEl?.classList.contains("visible"));
+}
+
+function hideIndicator() {
+  if (!pageIndicatorEl) return false;
+  if (pageIndicatorTimer) {
+    clearTimeout(pageIndicatorTimer);
+    pageIndicatorTimer = 0;
+  }
+  if (pageIndicatorEl.classList.contains("visible")) {
+    pageIndicatorEl.classList.remove("visible");
+    return true;
+  }
+  return false;
+}
+
 function showIndicatorTemporarily(durationMs = 2800) {
   if (!pageIndicatorEl) return;
 
@@ -534,21 +551,29 @@ let mouseStartX = 0;
 let mouseStartY = 0;
 let mouseStartTime = 0;
 let isMouseDown = false;
+let isPointerDragging = false;
+let indicatorVisibleOnPointerDown = false;
 
 function onTouchStart(event) {
   if (event.touches.length !== 1) {
     isTouchActive = false;
     return;
   }
+  isPointerDragging = false;
+  indicatorVisibleOnPointerDown = isIndicatorVisible();
   const touch = event.touches[0];
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
   touchStartTime = Date.now();
   isTouchActive = true;
-  showIndicatorTemporarily();
 }
 
-function onTouchMove() {
+function onTouchMove(event) {
+  if (!isTouchActive) return;
+  const touch = event.touches[0];
+  if (touch && Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY) > 8) {
+    isPointerDragging = true;
+  }
   showIndicatorTemporarily();
 }
 
@@ -568,12 +593,13 @@ function onTouchEnd(event) {
     } else {
       if (window.navManager) window.navManager.prevPage();
     }
+    showIndicatorTemporarily();
   }
-  showIndicatorTemporarily();
 }
 
 function onTouchCancel() {
   isTouchActive = false;
+  isPointerDragging = false;
 }
 
 function onMouseDown(event) {
@@ -581,14 +607,19 @@ function onMouseDown(event) {
   if (event.target.closest?.(".castboard-context-menu, .page-indicator")) {
     return;
   }
+  isPointerDragging = false;
+  indicatorVisibleOnPointerDown = isIndicatorVisible();
   mouseStartX = event.clientX;
   mouseStartY = event.clientY;
   mouseStartTime = Date.now();
   isMouseDown = true;
-  showIndicatorTemporarily();
 }
 
-function onMouseMove() {
+function onMouseMove(event) {
+  if (!isMouseDown) return;
+  if (Math.hypot(event.clientX - mouseStartX, event.clientY - mouseStartY) > 8) {
+    isPointerDragging = true;
+  }
   showIndicatorTemporarily();
 }
 
@@ -606,17 +637,28 @@ function onMouseUp(event) {
     } else {
       if (window.navManager) window.navManager.prevPage();
     }
+    showIndicatorTemporarily();
   }
-  showIndicatorTemporarily();
 }
 
-function onPageClick() {
+function onPageClick(event) {
   if (hideContextMenu()) return;
   if (window.currentPageName === "time" && window.navManager) {
     window.navManager.restoreTransient();
     return;
   }
-  showIndicatorTemporarily();
+  if (event?.target?.closest?.(".castboard-context-menu, .page-indicator")) {
+    return;
+  }
+  if (isPointerDragging) {
+    isPointerDragging = false;
+    return;
+  }
+  if (indicatorVisibleOnPointerDown) {
+    hideIndicator();
+  } else {
+    showIndicatorTemporarily();
+  }
 }
 
 function preventContextMenu(event) {
