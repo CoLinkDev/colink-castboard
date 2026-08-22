@@ -19,14 +19,6 @@ function cacheLayoutMetrics() {
   document.documentElement.style.setProperty("--detail-art-size", artSize + "px");
 }
 
-function isDesktopCastBoard() {
-  return window.castBoardHost.config.desktop;
-}
-
-function isDesktopDevBuild() {
-  return window.castBoardHost.config.devtools;
-}
-
 function hideContextMenu() {
   if (!contextMenu || contextMenu.hidden) return false;
   contextMenu.hidden = true;
@@ -34,14 +26,12 @@ function hideContextMenu() {
 }
 
 function createContextMenu() {
-  if (!isDesktopCastBoard()) return;
-
   const labels = window.castBoardI18n.messages("contextMenu");
   contextMenu = document.createElement("div");
   contextMenu.className = "castboard-context-menu";
   contextMenu.hidden = true;
   contextMenu.setAttribute("role", "menu");
-  contextMenu.innerHTML = `<button class="castboard-context-menu-item" type="button" data-action="close" role="menuitem">${labels.close}</button>${isDesktopDevBuild() ? `<button class="castboard-context-menu-item" type="button" data-action="open-devtools" role="menuitem">${labels.openDevTools}</button>` : ""}`;
+  contextMenu.innerHTML = `<button class="castboard-context-menu-item" type="button" data-action="close" role="menuitem">${labels.close}</button>${window.castBoardHost.config.debug ? `<button class="castboard-context-menu-item" type="button" data-action="open-devtools" role="menuitem">${labels.openDevTools}</button>` : ""}`;
   contextMenu.addEventListener("click", (event) => {
     event.stopPropagation();
     const action = event.target.closest("[data-action]")?.dataset.action;

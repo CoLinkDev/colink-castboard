@@ -6,8 +6,7 @@
   const config = Object.freeze({
     language,
     peerBusinessVersion,
-    desktop: params.has("castboard-desktop"),
-    devtools: params.has("castboard-devtools"),
+    debug: params.has("debug"),
   });
   const featureGates = Object.freeze({
     sysinfoBasic: compareSemver(peerBusinessVersion, "1.1.0") >= 0,
@@ -44,7 +43,6 @@
   }
 
   function requestDesktopAction(action) {
-    if (!config.desktop) return;
     log("host-bridge", "desktop-action-requested", { action });
     window.location.assign(`https://castboard-action.invalid/${action}`);
   }
