@@ -56,6 +56,7 @@
       <span>Debug</span>
     </button>
 
+    <script src="host-bridge.js"></script>
     <script src="data.js"></script>
     <script src="main.js"></script>
 
@@ -69,7 +70,7 @@
     <script>
       window.debugBtnTimer = null;
       window.showDebugButtonTemporarily = function() {
-        const isDebug = new URLSearchParams(window.location.search).has("debug");
+        const isDebug = window.castBoardHost.config.debug;
         if (!isDebug) return;
         const btn = document.getElementById("debug-toggle-btn");
         if (!btn) return;
@@ -90,7 +91,7 @@
       };
 
       (function() {
-        const isDebug = new URLSearchParams(window.location.search).has("debug");
+        const isDebug = window.castBoardHost.config.debug;
         if (isDebug) {
           // Keep it hidden initially; shown temporarily on user clicks
 

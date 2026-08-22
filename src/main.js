@@ -1,12 +1,3 @@
-// Sync document language from URL query string on startup
-(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const lang = urlParams.get('lang');
-  if (lang) {
-    document.documentElement.setAttribute('lang', lang);
-  }
-})();
-
 // ==== Global Config & Public State ====
 window.pages = {};
 window.currentPageName = null;
@@ -144,21 +135,17 @@ function contextMenuLocale() {
 }
 
 function isDesktopCastBoard() {
-  return new URLSearchParams(window.location.search).has("castboard-desktop");
+  return window.castBoardHost.config.desktop;
 }
 
 function isDesktopDevBuild() {
-  return new URLSearchParams(window.location.search).has("castboard-devtools");
+  return window.castBoardHost.config.devtools;
 }
 
 function hideContextMenu() {
   if (!contextMenu || contextMenu.hidden) return false;
   contextMenu.hidden = true;
   return true;
-}
-
-function requestDesktopAction(action) {
-  window.location.assign(`https://castboard-action.invalid/${action}`);
 }
 
 function createContextMenu() {
@@ -175,24 +162,9 @@ function createContextMenu() {
     const action = event.target.closest("[data-action]")?.dataset.action;
     if (!action) return;
     hideContextMenu();
-    requestDesktopAction(action);
+    window.castBoardHost.requestDesktopAction(action);
   });
   document.body.appendChild(contextMenu);
-}
-
-function callBackend(name) {
-  const api = window.pywebview?.api;
-  const method = api?.[name];
-  if (typeof method !== "function") return;
-
-  try {
-    const result = method.call(api);
-    if (result && typeof result.catch === "function") {
-      result.catch(() => {});
-    }
-  } catch {
-    // Ignore if backend bridge is not ready; must not affect touch to open details.
-  }
 }
 
 let pageIndicatorEl = null;
@@ -409,7 +381,7 @@ class NavigationManager {
   }
 
   getNavigablePages() {
-    return window.featureGates?.sysinfoBasic
+    return window.castBoardHost.featureGates.sysinfoBasic
       ? ["lyrics", "detail", "sysinfo"]
       : ["lyrics", "detail"];
   }
@@ -549,7 +521,7 @@ function onProgressChange() {
   }
 }
 
-window.handleSysInfoStats = function(payload) {
+function handleSysInfoStats(payload) {
   function normalize(value) {
     if (!Number.isFinite(value)) return null;
     return Math.min(100, Math.max(0, value));
@@ -568,7 +540,9 @@ window.handleSysInfoStats = function(payload) {
   window.dispatchEvent(new CustomEvent("sysinfo-stats-change", {
     detail: window.latestSysInfoStats,
   }));
-};
+}
+
+window.castBoardHost.registerHandlers({ onSysInfoStats: handleSysInfoStats });
 
 function normalizeRate(value) {
   if (value === null || value === undefined) return null;
@@ -800,7 +774,7 @@ function bindEvents() {
 }
 
 const loadedPages = new Set();
-const isDebugActive = new URLSearchParams(window.location.search).has("debug");
+const isDebugActive = window.castBoardHost.config.debug;
 const totalPages = ["lyrics", "detail", "time", "sysinfo"];
 if (isDebugActive) {
   totalPages.push("debug");
@@ -811,8 +785,7 @@ window.onIframeLoad = function(pageName) {
   loadedPages.add(pageName);
 
   // Sync language to the loaded iframe
-  const urlParams = new URLSearchParams(window.location.search);
-  const lang = urlParams.get('lang');
+  const lang = window.castBoardHost.config.language;
   if (lang) {
     const iframe = document.getElementById(`iframe-${pageName}`);
     if (iframe?.contentDocument?.documentElement) {
@@ -841,7 +814,7 @@ function boot() {
   const ready = document.fonts?.ready ?? Promise.resolve();
   ready.then(() => {
     const stored = window.navManager.getStoredPage();
-    const initialPage = (stored === "sysinfo" && !window.featureGates?.sysinfoBasic)
+    const initialPage = (stored === "sysinfo" && !window.castBoardHost.featureGates.sysinfoBasic)
       ? "lyrics"
       : stored;
     window.navManager.navigateTo(initialPage);

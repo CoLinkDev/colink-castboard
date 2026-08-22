@@ -1,23 +1,3 @@
-// Semver comparison: returns negative / 0 / positive
-function compareSemver(a, b) {
-  const pa = String(a || "0.0.0").split(".").map(Number);
-  const pb = String(b || "0.0.0").split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    const diff = (pa[i] || 0) - (pb[i] || 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
-}
-
-const _peerBusinessVersion = new URLSearchParams(window.location.search).get("peerBusinessVersion") || "";
-
-const featureGates = {
-  sysinfoBasic: compareSemver(_peerBusinessVersion, "1.1.0") >= 0,
-  sysinfoNetDisk: compareSemver(_peerBusinessVersion, "1.2.0") >= 0,
-};
-
-window.featureGates = featureGates;
-
 const LYRICS = [];
 const TRACK_INFO = {
   title: "",
@@ -38,7 +18,7 @@ let progressTimerId = 0;
 const LYRICS_LINES_CHANGE_EVENT = "lyrics-lines-change";
 const LYRICS_TRACK_CHANGE_EVENT = "lyrics-track-change";
 const LYRICS_PROGRESS_CHANGE_EVENT = "lyrics-progress-change";
-const DEBUG_OVERLAY_ENABLED = new URLSearchParams(window.location.search).has("debug");
+const DEBUG_OVERLAY_ENABLED = window.castBoardHost.config.debug;
 window.debugEvents = [];
 
 function updateDebugOverlay(event, data) {
@@ -291,93 +271,6 @@ function onTrack(data) {
   if (progressChanged) notifyLyricsProgressChanged();
 }
 
-window.handleMusicEvent = function (event, data) {
-  handleEvent(event, data);
-};
-
-function durationHuman(milliseconds) {
-  const totalSeconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${minutes}:${seconds}`;
-}
-
-function protocolTrackToLegacy(payload) {
-  if (!payload || !payload.trackId) {
-    return {
-      title: "",
-      author: "",
-      album: "",
-      source: "",
-      cover: "",
-      duration: 0,
-      durationHuman: "0:00",
-    };
-  }
-
-  const durationMs = Number(payload.duration || 0);
-  return {
-    title: payload.title || "",
-    author: Array.isArray(payload.artists) ? payload.artists.join(", ") : "",
-    album: payload.album || "",
-    source: payload.source || "",
-    cover: payload.coverData ? `data:image/png;base64,${payload.coverData}` : payload.coverUrl || "",
-    duration: Math.floor(durationMs / 1000),
-    durationHuman: durationHuman(durationMs),
-    id: payload.trackId || "",
-  };
-}
-
-function protocolLyricToLegacy(payload) {
-  const convertLine = (line) => ({
-    time: Number(line.time || 0) / 1000,
-    text: typeof line.text === "string" ? line.text : "",
-  });
-  return {
-    lines: Array.isArray(payload?.lines) ? payload.lines.map(convertLine) : [],
-    translatedLines: Array.isArray(payload?.translatedLines) ? payload.translatedLines.map(convertLine) : [],
-    hasLyric: Array.isArray(payload?.lines) && payload.lines.length > 0,
-    hasTranslatedLyric: Array.isArray(payload?.translatedLines) && payload.translatedLines.length > 0,
-  };
-}
-
-window.handleCoLinkBusinessEvent = function (type, payload) {
-  switch (type) {
-    case "music.v1.track":
-      handleEvent("Track", protocolTrackToLegacy(payload));
-      break;
-    case "music.v1.lyric":
-      handleEvent("Lyric", protocolLyricToLegacy(payload));
-      break;
-    case "music.v1.progress":
-      handleEvent("PlayerProgress", {
-        progress: Number(payload?.progress || 0),
-        paused: payload?.paused !== false,
-      });
-      break;
-    case "sysinfo.v1.stats":
-      if (featureGates.sysinfoBasic && typeof window.handleSysInfoStats === "function") {
-        window.handleSysInfoStats({
-          cpu: payload?.cpu,
-          mem: payload?.mem,
-          gpu: payload?.gpu,
-          netUp: featureGates.sysinfoNetDisk ? (payload?.net_up ?? payload?.netUp) : undefined,
-          netDown: featureGates.sysinfoNetDisk ? (payload?.net_down ?? payload?.netDown) : undefined,
-          diskRead: featureGates.sysinfoNetDisk ? (payload?.disk_read ?? payload?.diskRead) : undefined,
-          diskWrite: featureGates.sysinfoNetDisk ? (payload?.disk_write ?? payload?.diskWrite) : undefined,
-        });
-      }
-      break;
-  }
-};
-
-function requestCachedState() {
-  if (window.pywebview && window.pywebview.api) {
-    window.pywebview.api.onReady();
-  }
-}
-
-window.addEventListener("pywebviewready", requestCachedState);
 window.addEventListener("beforeunload", stopProgressInterpolation);
 
 function handleEvent(event, data) {
@@ -394,6 +287,8 @@ function handleEvent(event, data) {
   }
   updateDebugOverlay(event, data);
 }
+
+window.castBoardHost.registerHandlers({ onMusicEvent: handleEvent });
 
 function _calcActiveIndex(t) {
   if (LYRICS.length === 0 || !Number.isFinite(t)) return 0;
