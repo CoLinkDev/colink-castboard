@@ -188,6 +188,12 @@ function createPageIndicator() {
 function updatePageIndicatorState(activePageName) {
   if (!pageIndicatorEl) return;
 
+  if (activePageName === "time") {
+    hideIndicator();
+    pageIndicatorEl.classList.remove("expanded");
+    return;
+  }
+
   const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
   if (dots.length <= 1) {
     pageIndicatorEl.style.display = "none";
@@ -222,6 +228,7 @@ function hideIndicator() {
 
 function showIndicatorTemporarily(durationMs = 2800) {
   if (!pageIndicatorEl) return;
+  if (window.currentPageName === "time") return;
 
   pageIndicatorEl.classList.add("visible");
   if (pageIndicatorTimer) {
