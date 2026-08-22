@@ -2,6 +2,7 @@
   const translations = Object.freeze({
     en: {
       contextMenu: { close: "Close", openDevTools: "Open DevTools" },
+      controls: { previous: "Previous", playPause: "Play / Pause", next: "Next" },
       lyrics: { noLyrics: "No lyrics available" },
       track: { unknownTitle: "Unknown Song", unknownAuthor: "Unknown Artist" },
       sysinfo: {
@@ -11,6 +12,7 @@
     },
     zh_CN: {
       contextMenu: { close: "关闭", openDevTools: "打开 DevTools" },
+      controls: { previous: "上一曲", playPause: "播放 / 暂停", next: "下一曲" },
       lyrics: { noLyrics: "暂无歌词" },
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知艺术家" },
       sysinfo: {
@@ -20,6 +22,7 @@
     },
     zh_TW: {
       contextMenu: { close: "關閉", openDevTools: "開啟 DevTools" },
+      controls: { previous: "上一首", playPause: "播放 / 暫停", next: "下一首" },
       lyrics: { noLyrics: "暫無歌詞" },
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知藝術家" },
       sysinfo: {
@@ -29,6 +32,7 @@
     },
     de: {
       contextMenu: { close: "Schließen", openDevTools: "DevTools öffnen" },
+      controls: { previous: "Vorheriger", playPause: "Wiedergabe / Pause", next: "Nächster" },
       lyrics: { noLyrics: "Keine Liedtexte verfügbar" },
       track: { unknownTitle: "Unbekannter Titel", unknownAuthor: "Unbekannter Künstler" },
       sysinfo: {
@@ -38,6 +42,7 @@
     },
     es: {
       contextMenu: { close: "Cerrar", openDevTools: "Abrir DevTools" },
+      controls: { previous: "Anterior", playPause: "Reproducir / Pausar", next: "Siguiente" },
       lyrics: { noLyrics: "No hay letras disponibles" },
       track: { unknownTitle: "Canción desconocida", unknownAuthor: "Artista desconocido" },
       sysinfo: {
@@ -47,6 +52,7 @@
     },
     ja: {
       contextMenu: { close: "閉じる", openDevTools: "DevTools を開く" },
+      controls: { previous: "前の曲", playPause: "再生 / 一時停止", next: "次の曲" },
       lyrics: { noLyrics: "歌詞はありません" },
       track: { unknownTitle: "不明な曲", unknownAuthor: "不明なアーティスト" },
       sysinfo: {
@@ -56,6 +62,7 @@
     },
     ko: {
       contextMenu: { close: "닫기", openDevTools: "DevTools 열기" },
+      controls: { previous: "이전 곡", playPause: "재생 / 일시정지", next: "다음 곡" },
       lyrics: { noLyrics: "가사가 없습니다" },
       track: { unknownTitle: "알 수 없는 노래", unknownAuthor: "알 수 없는 아티스트" },
       sysinfo: {
@@ -65,6 +72,7 @@
     },
     ru: {
       contextMenu: { close: "Закрыть", openDevTools: "Открыть DevTools" },
+      controls: { previous: "Предыдущий трек", playPause: "Воспроизведение / Пауза", next: "Следующий трек" },
       lyrics: { noLyrics: "Нет текста песни" },
       track: { unknownTitle: "Неизвестная композиция", unknownAuthor: "Неизвестный исполнитель" },
       sysinfo: {

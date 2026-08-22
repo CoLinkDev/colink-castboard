@@ -18,6 +18,7 @@ let progressTimerId = 0;
 const LYRICS_LINES_CHANGE_EVENT = "lyrics-lines-change";
 const LYRICS_TRACK_CHANGE_EVENT = "lyrics-track-change";
 const LYRICS_PROGRESS_CHANGE_EVENT = "lyrics-progress-change";
+const PLAYBACK_PAUSED_CHANGE_EVENT = "playback-paused-change";
 function notifyLyricsLinesChanged() {
   window.dispatchEvent(new Event(LYRICS_LINES_CHANGE_EVENT));
 }
@@ -28,6 +29,15 @@ function notifyLyricsTrackChanged() {
 
 function notifyLyricsProgressChanged() {
   window.dispatchEvent(new Event(LYRICS_PROGRESS_CHANGE_EVENT));
+}
+
+function setProgressPaused(nextValue) {
+  const nextPaused = nextValue !== false;
+  if (progressPaused === nextPaused) return false;
+
+  progressPaused = nextPaused;
+  window.dispatchEvent(new Event(PLAYBACK_PAUSED_CHANGE_EVENT));
+  return true;
 }
 
 function normalizeTrackText(value) {
@@ -174,7 +184,7 @@ function onPlayerProgress(data) {
   if (!data || typeof data.progress !== "number") return;
 
   const nextPosition = data.progress / 1000;
-  progressPaused = data.paused !== false;
+  setProgressPaused(data.paused);
   progressAnchorPosition = clampProgressPosition(nextPosition);
   progressAnchorTime = performance.now();
 
@@ -203,7 +213,7 @@ function onTrack(payload) {
       trackChanged = true;
     }
     stopProgressInterpolation();
-    progressPaused = true;
+    setProgressPaused(true);
     progressAnchorPosition = 0;
     progressAnchorTime = 0;
     linesChanged = clearLyricsData();
@@ -302,6 +312,12 @@ Object.defineProperty(window, "progressPosition", {
   set(v) { progressPosition = v; },
   configurable: true,
   enumerable: true
+});
+
+Object.defineProperty(window, "progressPaused", {
+  get() { return progressPaused; },
+  configurable: true,
+  enumerable: true,
 });
 
 Object.defineProperty(window, "activeIndex", {

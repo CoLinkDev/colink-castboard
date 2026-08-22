@@ -211,7 +211,7 @@ body {
   pointer-events: none;
 }
 
-/* Page Indicator (Bottom 3 Dots) */
+/* Page Indicator (Bottom Dots / Control Island) */
 .page-indicator {
   position: fixed;
   bottom: clamp(14px, 2.5vh, 28px);
@@ -219,9 +219,10 @@ body {
   transform: translateX(-50%) translateY(6px);
   z-index: 10000;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: clamp(6px, 1vh, 10px);
-  padding: clamp(6px, 0.9vh, 9px) clamp(12px, 1.8vh, 18px);
+  gap: 0;
+  padding: clamp(7px, 1.1vh, 11px) clamp(14px, 2.2vh, 22px);
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(20, 20, 25, 0.6);
@@ -230,7 +231,12 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    padding 0.35s var(--ease),
+    background 0.35s ease,
+    box-shadow 0.35s ease;
   user-select: none;
 }
 
@@ -240,9 +246,101 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+.page-indicator.expanded {
+  padding: clamp(12px, 1.8vh, 16px) clamp(20px, 3vh, 30px) clamp(10px, 1.4vh, 14px);
+  background: rgba(20, 20, 25, 0.72);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.48);
+}
+
+.media-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3.2vh, 32px);
+  width: 0;
+  max-width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  margin-bottom: 0;
+  transition:
+    max-width 0.35s var(--ease),
+    height 0.35s var(--ease),
+    opacity 0.2s ease,
+    margin-bottom 0.35s var(--ease);
+}
+
+.page-indicator.expanded .media-controls-row {
+  width: auto;
+  max-width: clamp(260px, 38vw, 340px);
+  height: clamp(50px, 7vh, 60px);
+  opacity: 1;
+  pointer-events: auto;
+  margin-bottom: clamp(12px, 2vh, 18px);
+  transition:
+    max-width 0.35s var(--ease),
+    height 0.35s var(--ease),
+    opacity 0.3s ease 0.05s,
+    margin-bottom 0.35s var(--ease);
+}
+
+.media-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(48px, 6.8vh, 58px);
+  height: clamp(48px, 6.8vh, 58px);
+  min-width: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.media-control-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.media-control-btn:active {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.media-control-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 1px;
+}
+
+.media-control-btn svg {
+  width: clamp(28px, 3.8vh, 34px);
+  height: clamp(28px, 3.8vh, 34px);
+  fill: #ffffff;
+  display: block;
+  pointer-events: none;
+}
+
+.page-indicator-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.2vh, 12px);
+  flex-shrink: 0;
+}
+
 .page-indicator-dot {
-  width: clamp(6px, 0.9vh, 8px);
-  height: clamp(6px, 0.9vh, 8px);
+  width: clamp(7px, 1vh, 9px);
+  height: clamp(7px, 1vh, 9px);
   padding: 0;
   border: 0;
   border-radius: 9999px;
@@ -259,8 +357,7 @@ body {
 }
 
 .page-indicator-dot.active {
-  width: clamp(18px, 2.8vh, 24px);
+  width: clamp(22px, 3.2vh, 28px);
   background: #ffffff;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
 }
-

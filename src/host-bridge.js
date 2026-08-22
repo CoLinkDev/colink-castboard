@@ -2,6 +2,7 @@
 (() => {
   const params = new URLSearchParams(window.location.search);
   const language = params.get("lang") || "";
+  const mediaControlActions = new Set(["play", "pause", "next", "previous"]);
   let ipc = window.castboardIPC;
 
   if (!ipc && typeof window.castBoardUtils?.createMockIPC === "function") {
@@ -18,6 +19,7 @@
   });
   const featureGates = Object.freeze({
     sysinfoBasic: compareSemver(peerBusinessVersion, "1.1.0") >= 0,
+    mediaControl: supportsBusinessProtocol(peerBusinessVersion, "1.6.0"),
   });
   const handlers = {};
   const hostReadyListeners = new Set();
@@ -142,6 +144,13 @@
     return requestHost("castboard.sysinfo.alive", {});
   }
 
+  function sendMediaControl(action) {
+    if (!mediaControlActions.has(action)) {
+      return Promise.reject(new TypeError(`Unsupported media control action: ${String(action)}`));
+    }
+    return requestHost("castboard.media.control", { action });
+  }
+
   window.castBoardHost = Object.freeze({
     config,
     featureGates,
@@ -152,6 +161,7 @@
     close,
     openDevTools,
     sendSysInfoAlive,
+    sendMediaControl,
   });
   ipc.subscribe((message) => {
     log("host-bridge", "event-received", {
@@ -177,4 +187,21 @@
     document.documentElement.setAttribute("lang", language);
   }
   log("host-bridge", "host-bridge-ready", { config, featureGates });
+
+  function supportsBusinessProtocol(version, minimumVersion) {
+    const parsedVersion = parseBusinessVersion(version);
+    const parsedMinimum = parseBusinessVersion(minimumVersion);
+    if (!parsedVersion || !parsedMinimum || parsedVersion.major !== parsedMinimum.major) {
+      return false;
+    }
+    return compareSemver(version, minimumVersion) >= 0;
+  }
+
+  function parseBusinessVersion(value) {
+    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(value || "").trim());
+    if (!match) {
+      return null;
+    }
+    return { major: Number(match[1]) };
+  }
 })();
