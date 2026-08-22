@@ -12,6 +12,11 @@
     sysinfoBasic: compareSemver(peerBusinessVersion, "1.1.0") >= 0,
   });
   const handlers = {};
+  const ipc = window.castboardIPC;
+
+  if (!ipc) {
+    throw new Error("CastBoard IPC is unavailable");
+  }
 
   function registerHandlers(nextHandlers) {
     Object.assign(handlers, nextHandlers);
@@ -42,26 +47,14 @@
     }
   }
 
-  function isTauriHost() {
-    return typeof window.__TAURI_INTERNALS__?.invoke === "function";
-  }
-
   function close() {
-    if (!isTauriHost()) {
-      log("host-bridge", "close-ignored", { reason: "tauri-unavailable" });
-      return;
-    }
     log("host-bridge", "close-requested");
-    window.location.assign("https://castboard-action.invalid/close");
+    return ipc.request({ type: "castboard.close", payload: {} });
   }
 
   function openDevTools() {
-    if (!isTauriHost()) {
-      log("host-bridge", "open-devtools-ignored", { reason: "tauri-unavailable" });
-      return;
-    }
     log("host-bridge", "open-devtools-requested");
-    window.location.assign("https://castboard-action.invalid/open-devtools");
+    return ipc.request({ type: "castboard.openDevTools", payload: {} });
   }
 
   window.castBoardHost = Object.freeze({
@@ -71,10 +64,25 @@
     close,
     openDevTools,
   });
-  window.handleCoLinkBusinessEvent = handleBusinessEvent;
+  ipc.subscribe((message) => {
+    if (
+      message?.channel !== "castboard" ||
+      message.kind !== "event" ||
+      message.type !== "business"
+    ) {
+      return;
+    }
+    handleBusinessEvent(message.payload?.type, message.payload?.payload);
+  });
 
   if (language) {
     document.documentElement.setAttribute("lang", language);
   }
   log("host-bridge", "host-bridge-ready", { config, featureGates });
+
+  window.addEventListener("load", () => {
+    ipc.request({ type: "castboard.ready", payload: {} }).catch((error) => {
+      log("host-bridge", "ready-request-failed", { error: String(error) });
+    });
+  }, { once: true });
 })();
