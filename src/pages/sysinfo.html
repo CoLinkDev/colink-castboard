@@ -404,6 +404,81 @@
         let aliveTimer = null;
         let unsubscribeHostReady = null;
 
+        const currentValues = {
+          cpu: null,
+          mem: null,
+          gpu: null,
+          netDown: null,
+          netUp: null,
+          diskRead: null,
+          diskWrite: null,
+        };
+        const activeAnimations = {};
+
+        function easeOutCubic(t) {
+          return 1 - Math.pow(1 - t, 3);
+        }
+
+        function cancelAnimation(key) {
+          if (activeAnimations[key]) {
+            cancelAnimationFrame(activeAnimations[key].rafId);
+            delete activeAnimations[key];
+          }
+        }
+
+        function cancelAllAnimations() {
+          for (const key of Object.keys(activeAnimations)) {
+            cancelAnimationFrame(activeAnimations[key].rafId);
+            delete activeAnimations[key];
+          }
+        }
+
+        function animateValue(key, targetValue, onUpdate, duration = 350) {
+          if (targetValue === null || targetValue === undefined) {
+            cancelAnimation(key);
+            currentValues[key] = null;
+            onUpdate(null);
+            return;
+          }
+
+          const targetNum = Number(targetValue);
+          const startVal = currentValues[key] === null ? targetNum : currentValues[key];
+
+          if (currentValues[key] === null || startVal === targetNum) {
+            cancelAnimation(key);
+            currentValues[key] = targetNum;
+            onUpdate(targetNum);
+            return;
+          }
+
+          cancelAnimation(key);
+
+          const startTime = performance.now();
+
+          function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const eased = easeOutCubic(progress);
+            const current = startVal + (targetNum - startVal) * eased;
+            currentValues[key] = current;
+            onUpdate(current);
+
+            if (progress < 1) {
+              activeAnimations[key] = {
+                rafId: requestAnimationFrame(step),
+              };
+            } else {
+              currentValues[key] = targetNum;
+              onUpdate(targetNum);
+              delete activeAnimations[key];
+            }
+          }
+
+          activeAnimations[key] = {
+            rafId: requestAnimationFrame(step),
+          };
+        }
+
         function sendSysInfoAlive() {
           void parent.window.castBoardHost.sendSysInfoAlive().catch(() => {});
         }
@@ -474,14 +549,12 @@
 
           for (const key of ["cpu", "mem", "gpu"]) {
             const metric = container.querySelector(`[data-key="${key}"]`);
-            const valueEl = metric?.querySelector("[data-value]");
             const fillEl = metric?.querySelector("[data-fill]");
             const unitEl = metric?.querySelector("[data-unit]");
-            if (!metric || !valueEl || !fillEl) continue;
+            if (!metric || !fillEl) continue;
 
             const value = normalize(latestStats[key]);
             metric.dataset.empty = value == null ? "true" : "false";
-            valueEl.textContent = value == null ? "--" : String(Math.round(value));
             if (unitEl) unitEl.textContent = "";
             
             // Circumference of r=50 circle is 2 * PI * 50 = 314.159
@@ -493,18 +566,23 @@
             } else {
               metric.classList.remove("high-load");
             }
+
+            animateValue(key, value, (current) => {
+              if (!mountedContainer) return;
+              const curValueEl = metric.querySelector("[data-value]");
+              if (curValueEl) {
+                curValueEl.textContent = current == null ? "--" : String(Math.round(current));
+              }
+            });
           }
 
           for (const key of ["netDown", "netUp", "diskRead", "diskWrite"]) {
             const metric = container.querySelector(`[data-key="${key}"]`);
-            const valueEl = container.querySelector(`[data-value-for="${key}"]`);
             const fillEl = metric?.querySelector("[data-fill]");
-            const unitEl = container.querySelector(`[data-unit-for="${key}"]`);
-            if (!metric || !valueEl || !fillEl || !unitEl) continue;
+            if (!metric || !fillEl) continue;
 
             const raw = latestStats[key];
             const empty = raw == null;
-            const formatted = formatRate(raw);
             metric.dataset.empty = empty ? "true" : "false";
 
             const valueCell = container.querySelector(`[data-value-for="${key}"]`)?.closest('.metric-value-cell');
@@ -512,10 +590,19 @@
               valueCell.dataset.empty = empty ? "true" : "false";
             }
 
-            valueEl.textContent = formatted.value;
-            unitEl.textContent = formatted.unit;
             fillEl.setAttribute("stroke-dashoffset", "314.159");
             metric.classList.remove("high-load");
+
+            animateValue(key, raw, (current) => {
+              if (!mountedContainer) return;
+              const curValueEl = container.querySelector(`[data-value-for="${key}"]`);
+              const curUnitEl = container.querySelector(`[data-unit-for="${key}"]`);
+              if (curValueEl && curUnitEl) {
+                const formatted = formatRate(current);
+                curValueEl.textContent = formatted.value;
+                curUnitEl.textContent = formatted.unit;
+              }
+            });
           }
         }
 
@@ -532,10 +619,18 @@
           unmount() {
             mountedContainer = null;
             stopSysInfoAlive();
+            cancelAllAnimations();
+            for (const key of Object.keys(currentValues)) {
+              currentValues[key] = null;
+            }
           },
           cleanup() {
             mountedContainer = null;
             stopSysInfoAlive();
+            cancelAllAnimations();
+            for (const key of Object.keys(currentValues)) {
+              currentValues[key] = null;
+            }
           }
         };
       })();
