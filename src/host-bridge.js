@@ -131,6 +131,10 @@
     return requestHost("castboard.openDevTools", {});
   }
 
+  function sendSysInfoAlive() {
+    return requestHost("castboard.sysinfo.alive", {});
+  }
+
   window.castBoardHost = Object.freeze({
     config,
     featureGates,
@@ -140,6 +144,7 @@
     isHostReady: () => hostReady,
     close,
     openDevTools,
+    sendSysInfoAlive,
   });
   ipc.subscribe((message) => {
     log("host-bridge", "event-received", {

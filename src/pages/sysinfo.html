@@ -401,6 +401,29 @@
     <script>
       (function() {
         let mountedContainer = null;
+        let aliveTimer = null;
+        let unsubscribeHostReady = null;
+
+        function sendSysInfoAlive() {
+          void parent.window.castBoardHost.sendSysInfoAlive().catch(() => {});
+        }
+
+        function startSysInfoAlive() {
+          if (aliveTimer !== null) return;
+          sendSysInfoAlive();
+          aliveTimer = window.setInterval(sendSysInfoAlive, 5_000);
+        }
+
+        function stopSysInfoAlive() {
+          if (aliveTimer !== null) {
+            window.clearInterval(aliveTimer);
+            aliveTimer = null;
+          }
+          if (unsubscribeHostReady !== null) {
+            unsubscribeHostReady();
+            unsubscribeHostReady = null;
+          }
+        }
 
         function normalize(value) {
           if (value === null || value === undefined) return null;
@@ -504,12 +527,15 @@
             mountedContainer = container;
             localizeUI(container);
             render(container);
+            unsubscribeHostReady = parent.window.castBoardHost.onHostReady(startSysInfoAlive);
           },
           unmount() {
             mountedContainer = null;
+            stopSysInfoAlive();
           },
           cleanup() {
             mountedContainer = null;
+            stopSysInfoAlive();
           }
         };
       })();
