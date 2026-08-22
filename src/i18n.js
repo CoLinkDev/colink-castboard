@@ -6,7 +6,7 @@
       track: { unknownTitle: "Unknown Song", unknownAuthor: "Unknown Artist" },
       sysinfo: {
         cpuDesc: "Processor", memDesc: "Memory", gpuDesc: "Graphics", netDownDesc: "Download",
-        netUpDesc: "Upload", diskReadDesc: "Read", diskWriteDesc: "Write",
+        netUpDesc: "Upload", diskReadDesc: "Disk Read", diskWriteDesc: "Disk Write",
       },
     },
     zh_CN: {
@@ -15,7 +15,7 @@
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知艺术家" },
       sysinfo: {
         cpuDesc: "处理器", memDesc: "内存", gpuDesc: "图形", netDownDesc: "下载",
-        netUpDesc: "上传", diskReadDesc: "读取", diskWriteDesc: "写入",
+        netUpDesc: "上传", diskReadDesc: "硬盘读取", diskWriteDesc: "硬盘写入",
       },
     },
     zh_TW: {
@@ -24,7 +24,7 @@
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知藝術家" },
       sysinfo: {
         cpuDesc: "處理器", memDesc: "記憶體", gpuDesc: "圖形", netDownDesc: "下載",
-        netUpDesc: "上傳", diskReadDesc: "讀取", diskWriteDesc: "寫入",
+        netUpDesc: "上傳", diskReadDesc: "硬碟讀取", diskWriteDesc: "硬碟寫入",
       },
     },
     de: {
@@ -33,7 +33,7 @@
       track: { unknownTitle: "Unbekannter Titel", unknownAuthor: "Unbekannter Künstler" },
       sysinfo: {
         cpuDesc: "Prozessor", memDesc: "Speicher", gpuDesc: "Grafik", netDownDesc: "Download",
-        netUpDesc: "Upload", diskReadDesc: "Lesen", diskWriteDesc: "Schreiben",
+        netUpDesc: "Upload", diskReadDesc: "Datenträger-Lesen", diskWriteDesc: "Datenträger-Schreiben",
       },
     },
     es: {
@@ -42,7 +42,7 @@
       track: { unknownTitle: "Canción desconocida", unknownAuthor: "Artista desconocido" },
       sysinfo: {
         cpuDesc: "Procesador", memDesc: "Memoria", gpuDesc: "Gráficos", netDownDesc: "Descarga",
-        netUpDesc: "Subida", diskReadDesc: "Lectura", diskWriteDesc: "Escritura",
+        netUpDesc: "Subida", diskReadDesc: "Lectura de disco", diskWriteDesc: "Escritura de disco",
       },
     },
     ja: {
@@ -51,7 +51,7 @@
       track: { unknownTitle: "不明な曲", unknownAuthor: "不明なアーティスト" },
       sysinfo: {
         cpuDesc: "プロセッサ", memDesc: "メモリ", gpuDesc: "グラフィックス", netDownDesc: "ダウンロード",
-        netUpDesc: "アップロード", diskReadDesc: "読み取り", diskWriteDesc: "書き込み",
+        netUpDesc: "アップロード", diskReadDesc: "ディスク読み取り", diskWriteDesc: "ディスク書き込み",
       },
     },
     ko: {
@@ -60,7 +60,7 @@
       track: { unknownTitle: "알 수 없는 노래", unknownAuthor: "알 수 없는 아티스트" },
       sysinfo: {
         cpuDesc: "프로세서", memDesc: "메모리", gpuDesc: "그래픽", netDownDesc: "다운로드",
-        netUpDesc: "업로드", diskReadDesc: "읽기", diskWriteDesc: "쓰기",
+        netUpDesc: "업로드", diskReadDesc: "디스크 읽기", diskWriteDesc: "디스크 쓰기",
       },
     },
     ru: {
@@ -69,7 +69,7 @@
       track: { unknownTitle: "Неизвестная композиция", unknownAuthor: "Неизвестный исполнитель" },
       sysinfo: {
         cpuDesc: "Процессор", memDesc: "Память", gpuDesc: "Графика", netDownDesc: "Загрузка",
-        netUpDesc: "Отдача", diskReadDesc: "Чтение", diskWriteDesc: "Запись",
+        netUpDesc: "Отдача", diskReadDesc: "Чтение диска", diskWriteDesc: "Запись на диск",
       },
     },
   });
