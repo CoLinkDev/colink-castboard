@@ -96,6 +96,7 @@ function createPageIndicator() {
   prevBtn.innerHTML = ICON_PREVIOUS;
   prevBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    event.currentTarget?.blur?.();
     window.castBoardHost.sendMediaControl("previous").catch((error) => {
       log("app", "send-media-control-failed", { action: "previous", error: String(error) });
     });
@@ -111,6 +112,7 @@ function createPageIndicator() {
   playPauseBtn.innerHTML = window.progressPaused ? ICON_PLAY : ICON_PAUSE;
   playPauseBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    event.currentTarget?.blur?.();
     const currentIsPaused = playPauseBtn.dataset.paused === "true";
     const nextIsPaused = !currentIsPaused;
     updatePlayPauseButtonState(nextIsPaused);
@@ -139,6 +141,7 @@ function createPageIndicator() {
   nextBtn.innerHTML = ICON_NEXT;
   nextBtn.addEventListener("click", (event) => {
     event.stopPropagation();
+    event.currentTarget?.blur?.();
     window.castBoardHost.sendMediaControl("next").catch((error) => {
       log("app", "send-media-control-failed", { action: "next", error: String(error) });
     });
@@ -173,6 +176,7 @@ function createPageIndicator() {
     dot.setAttribute("aria-label", item.label);
     dot.addEventListener("click", (event) => {
       event.stopPropagation();
+      event.currentTarget?.blur?.();
       if (window.navManager) {
         window.navManager.navigateTo(item.name);
         showIndicatorTemporarily();

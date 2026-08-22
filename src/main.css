@@ -308,10 +308,23 @@ body {
     box-shadow 0.2s ease,
     opacity 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
-.media-control-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+@media (hover: hover) and (pointer: fine) {
+  .media-control-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .media-control-btn[data-action="playPause"]:hover {
+    background: rgba(255, 255, 255, 0.26);
+  }
+
+  .page-indicator-dot:hover {
+    background: rgba(255, 255, 255, 0.65);
+    transform: scale(1.2);
+  }
 }
 
 .media-control-btn:active {
@@ -325,18 +338,16 @@ body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-.media-control-btn[data-action="playPause"]:hover {
-  background: rgba(255, 255, 255, 0.26);
-}
-
 .media-control-btn[data-action="playPause"]:active {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.36);
 }
 
-.media-control-btn:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.5);
-  outline-offset: 1px;
+.media-control-btn:focus,
+.media-control-btn:focus-visible,
+.page-indicator-dot:focus,
+.page-indicator-dot:focus-visible {
+  outline: none;
 }
 
 .media-control-btn svg {
@@ -366,11 +377,12 @@ body {
   outline: none;
   transition: all 0.25s var(--ease);
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
-.page-indicator-dot:hover {
-  background: rgba(255, 255, 255, 0.65);
-  transform: scale(1.2);
+.page-indicator-dot:active {
+  transform: scale(1.1);
 }
 
 .page-indicator-dot.active {
