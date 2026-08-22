@@ -18,41 +18,7 @@ let progressTimerId = 0;
 const LYRICS_LINES_CHANGE_EVENT = "lyrics-lines-change";
 const LYRICS_TRACK_CHANGE_EVENT = "lyrics-track-change";
 const LYRICS_PROGRESS_CHANGE_EVENT = "lyrics-progress-change";
-const DEBUG_OVERLAY_ENABLED = window.castBoardHost.config.debug;
 const { formatDuration } = window.castBoardUtils;
-window.debugEvents = [];
-
-function updateDebugOverlay(event, data) {
-  if (!DEBUG_OVERLAY_ENABLED) return;
-
-  // Add event to history
-  window.debugEvents.push({
-    id: Date.now() + "-" + Math.random().toString(36).substring(2, 6),
-    time: new Date().toLocaleTimeString() + "." + String(Date.now() % 1000).padStart(3, "0"),
-    event,
-    data: data ? JSON.parse(JSON.stringify(data)) : null
-  });
-  if (window.debugEvents.length > 50) {
-    window.debugEvents.shift();
-  }
-
-  // Dispatch custom event to notify listeners
-  window.dispatchEvent(new CustomEvent("debug-event-logged"));
-
-  const el = document.getElementById("castboard-debug");
-  if (!el) return;
-
-  el.hidden = false;
-  el.textContent = [
-    `event=${event}`,
-    `page=${window.currentPageName || "<none>"}`,
-    `track=${TRACK_INFO.title || "<empty>"}`,
-    `lyrics=${LYRICS.length}`,
-    `active=${activeIndex}`,
-    `progress=${progressPosition.toFixed(1)}`,
-    `rawLines=${Array.isArray(data?.lines) ? data.lines.length : "-"}`,
-  ].join("\n");
-}
 
 function notifyLyricsLinesChanged() {
   window.dispatchEvent(new Event(LYRICS_LINES_CHANGE_EVENT));
@@ -292,7 +258,6 @@ function handleMusicBusinessEvent(type, payload) {
       onTrack(payload);
       break;
   }
-  updateDebugOverlay(type, payload);
 }
 
 window.castBoardHost.registerHandlers({ onMusicBusinessEvent: handleMusicBusinessEvent });

@@ -1,6 +1,6 @@
 // CastBoard's only boundary to its native hosts and external protocol data.
 (() => {
-  const { compareSemver } = window.castBoardUtils;
+  const { compareSemver, log } = window.castBoardUtils;
   const params = new URLSearchParams(window.location.search);
   const language = params.get("lang") || "";
   const peerBusinessVersion = params.get("peerBusinessVersion") || "";
@@ -18,6 +18,7 @@
 
   function registerHandlers(nextHandlers) {
     Object.assign(handlers, nextHandlers);
+    log("host-bridge", "host-handlers-registered", { handlers: Object.keys(nextHandlers) });
   }
 
   function dispatchMusicBusinessEvent(type, payload) {
@@ -29,6 +30,7 @@
   }
 
   function handleBusinessEvent(type, payload) {
+    log("host-bridge", "business-message-received", { type, payload });
     switch (type) {
       case "music.v1.track":
       case "music.v1.lyric":
@@ -45,6 +47,7 @@
 
   function requestDesktopAction(action) {
     if (!config.desktop) return;
+    log("host-bridge", "desktop-action-requested", { action });
     window.location.assign(`https://castboard-action.invalid/${action}`);
   }
 
@@ -59,4 +62,5 @@
   if (language) {
     document.documentElement.setAttribute("lang", language);
   }
+  log("host-bridge", "host-bridge-ready", { config, featureGates });
 })();

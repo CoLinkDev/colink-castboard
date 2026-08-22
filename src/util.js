@@ -1,4 +1,48 @@
 (() => {
+  const MAX_LOG_ENTRIES = 50;
+
+  if (!Array.isArray(window.debugEvents)) {
+    window.debugEvents = [];
+  }
+
+  function log(scope, event, payload = null) {
+    const now = new Date();
+    const entry = {
+      id: `${now.getTime()}-${Math.random().toString(36).slice(2, 6)}`,
+      time: now.toLocaleTimeString() + "." + String(now.getMilliseconds()).padStart(3, "0"),
+      timestamp: now.toISOString(),
+      scope: String(scope || "app"),
+      event,
+      data: copyLogPayload(payload),
+    };
+    const entries = Array.isArray(window.debugEvents)
+      ? window.debugEvents
+      : (window.debugEvents = []);
+    entries.push(entry);
+    if (entries.length > MAX_LOG_ENTRIES) {
+      entries.splice(0, entries.length - MAX_LOG_ENTRIES);
+    }
+
+    console.debug(`[CastBoard][${entry.time}][${entry.scope}] ${event}`, entry.data);
+    if (typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {
+      window.dispatchEvent(new CustomEvent("debug-event-logged", { detail: entry }));
+    }
+    return entry;
+  }
+
+  function clearLogs() {
+    window.debugEvents.length = 0;
+  }
+
+  function copyLogPayload(payload) {
+    if (payload === undefined) return null;
+    try {
+      return JSON.parse(JSON.stringify(payload));
+    } catch {
+      return String(payload);
+    }
+  }
+
   function compareSemver(a, b) {
     const left = String(a || "0.0.0").split(".").map(Number);
     const right = String(b || "0.0.0").split(".").map(Number);
@@ -110,6 +154,7 @@
   window.castBoardUtils = Object.freeze({
     cancelRaf,
     clampUnit,
+    clearLogs,
     clearTimer,
     compareSemver,
     cssFunctionArgs,
@@ -120,5 +165,6 @@
     readCssNumber,
     readRootFontSize,
     resolveCssLength,
+    log,
   });
 })();

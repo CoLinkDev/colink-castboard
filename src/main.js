@@ -10,6 +10,7 @@ let bootLocked = true;
 let contextMenu = null;
 const {
   clearTimer,
+  log,
   normalizeRate,
   parseCssLength,
 } = window.castBoardUtils;
@@ -222,6 +223,11 @@ class NavigationManager {
 
     this.currentPageName = newPageName;
     window.currentPageName = newPageName;
+    log("navigation", "page-navigated", {
+      from: oldPageName,
+      to: newPageName,
+      temporary: isTemporary,
+    });
     if (typeof window.updateDebugButtonState === "function") {
       window.updateDebugButtonState(newPageName);
     }

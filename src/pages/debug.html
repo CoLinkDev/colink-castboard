@@ -550,23 +550,29 @@
           }
         }
 
-        function getBadgeClass(event) {
+        function getBadgeClass(event, data) {
+          if (event === "business-message-received") {
+            return getBadgeClass(data?.type);
+          }
           switch (event) {
-            case "Lyric": return "event-type-lyric";
-            case "Track": return "event-type-track";
-            case "PlayerProgress": return "event-type-progress";
+            case "music.v1.lyric": return "event-type-lyric";
+            case "music.v1.track": return "event-type-track";
+            case "music.v1.progress": return "event-type-progress";
             default: return "";
           }
         }
 
         function getEventTextPreview(event, data) {
           if (!data) return "";
+          if (event === "business-message-received") {
+            return `${data.type}: ${getEventTextPreview(data.type, data.payload)}`;
+          }
           switch (event) {
-            case "PlayerProgress":
+            case "music.v1.progress":
               return `progress=${data.progress} paused=${data.paused}`;
-            case "Track":
+            case "music.v1.track":
               return `title="${data.title || ''}" duration=${data.duration}`;
-            case "Lyric":
+            case "music.v1.lyric":
               return `lines=${Array.isArray(data.lines) ? data.lines.length : 0}`;
             default:
               return JSON.stringify(data);
@@ -622,8 +628,8 @@
             leftDiv.className = "event-left";
             
             const badge = document.createElement("span");
-            badge.className = `event-type-badge ${getBadgeClass(evt.event)}`;
-            badge.textContent = evt.event;
+            badge.className = `event-type-badge ${getBadgeClass(evt.event, evt.data)}`;
+            badge.textContent = `[${evt.scope || "app"}] ${evt.event}`;
             
             const timeSpan = document.createElement("span");
             timeSpan.className = "event-time";
@@ -687,7 +693,7 @@
             const clearBtn = container.querySelector("#clear-logs-btn");
             if (clearBtn) {
               clearBtn.addEventListener("click", () => {
-                parent.debugEvents = [];
+                parent.castBoardUtils.clearLogs();
                 lastRenderedEventId = null;
                 if (consoleBody) {
                   consoleBody.innerHTML = `
