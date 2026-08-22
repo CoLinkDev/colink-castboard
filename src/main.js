@@ -37,7 +37,11 @@ function createContextMenu() {
     const action = event.target.closest("[data-action]")?.dataset.action;
     if (!action) return;
     hideContextMenu();
-    window.castBoardHost.requestDesktopAction(action);
+    if (action === "close") {
+      window.castBoardHost.close();
+    } else if (action === "open-devtools") {
+      window.castBoardHost.openDevTools();
+    }
   });
   document.body.appendChild(contextMenu);
 }

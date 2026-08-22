@@ -42,16 +42,34 @@
     }
   }
 
-  function requestDesktopAction(action) {
-    log("host-bridge", "desktop-action-requested", { action });
-    window.location.assign(`https://castboard-action.invalid/${action}`);
+  function isTauriHost() {
+    return typeof window.__TAURI_INTERNALS__?.invoke === "function";
+  }
+
+  function close() {
+    if (!isTauriHost()) {
+      log("host-bridge", "close-ignored", { reason: "tauri-unavailable" });
+      return;
+    }
+    log("host-bridge", "close-requested");
+    window.location.assign("https://castboard-action.invalid/close");
+  }
+
+  function openDevTools() {
+    if (!isTauriHost()) {
+      log("host-bridge", "open-devtools-ignored", { reason: "tauri-unavailable" });
+      return;
+    }
+    log("host-bridge", "open-devtools-requested");
+    window.location.assign("https://castboard-action.invalid/open-devtools");
   }
 
   window.castBoardHost = Object.freeze({
     config,
     featureGates,
     registerHandlers,
-    requestDesktopAction,
+    close,
+    openDevTools,
   });
   window.handleCoLinkBusinessEvent = handleBusinessEvent;
 
