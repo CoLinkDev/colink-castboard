@@ -505,12 +505,13 @@ function onPageClick() {
 }
 
 function preventContextMenu(event) {
+  event.preventDefault();
+  if (event.button !== 2) return;
+
   if (!contextMenu) {
-    event.preventDefault();
     return;
   }
 
-  event.preventDefault();
   contextMenu.hidden = false;
   const inset = 8;
   const maxLeft = Math.max(inset, window.innerWidth - contextMenu.offsetWidth - inset);
