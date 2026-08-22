@@ -18,8 +18,6 @@ let progressTimerId = 0;
 const LYRICS_LINES_CHANGE_EVENT = "lyrics-lines-change";
 const LYRICS_TRACK_CHANGE_EVENT = "lyrics-track-change";
 const LYRICS_PROGRESS_CHANGE_EVENT = "lyrics-progress-change";
-const { formatDuration } = window.castBoardUtils;
-
 function notifyLyricsLinesChanged() {
   window.dispatchEvent(new Event(LYRICS_LINES_CHANGE_EVENT));
 }
@@ -41,7 +39,15 @@ function clearLyricsData() {
     return false;
   }
   LYRICS.length = 0;
-  activeIndex = 0;
+  updateActiveIndex(0);
+  return true;
+}
+
+function updateActiveIndex(nextIndex) {
+  if (activeIndex === nextIndex) return false;
+
+  activeIndex = nextIndex;
+  log("lyrics", "active-index-changed", { activeIndex });
   return true;
 }
 
@@ -114,7 +120,7 @@ function applyProgressPosition(nextPosition) {
   progressPosition = clamped;
 
   if (LYRICS.length > 0) {
-    activeIndex = _calcActiveIndex(progressPosition);
+    updateActiveIndex(_calcActiveIndex(progressPosition));
   }
 
   notifyLyricsProgressChanged();
@@ -145,6 +151,7 @@ function onLyric(data) {
   const translatedLines = Array.isArray(data.translatedLines)
     ? data.translatedLines.map(toLyricLine).filter(Boolean)
     : [];
+  log("lyrics", "lyrics-parsed", { totalLines: lines.length });
 
   if (lines.length === 0) {
     const cleared = clearLyricsData();
@@ -158,7 +165,7 @@ function onLyric(data) {
   for (const item of mergeTranslatedLines(lines, translatedLines)) {
     LYRICS.push(item);
   }
-  activeIndex = _calcActiveIndex(progressPosition);
+  updateActiveIndex(_calcActiveIndex(progressPosition));
 
   notifyLyricsLinesChanged();
 }
@@ -204,8 +211,7 @@ function onTrack(payload) {
       progressPosition = 0;
       progressChanged = true;
     }
-    if (activeIndex !== 0) {
-      activeIndex = 0;
+    if (updateActiveIndex(0)) {
       progressChanged = true;
     }
   }
@@ -300,7 +306,7 @@ Object.defineProperty(window, "progressPosition", {
 
 Object.defineProperty(window, "activeIndex", {
   get() { return activeIndex; },
-  set(v) { activeIndex = v; },
+  set(v) { updateActiveIndex(v); },
   configurable: true,
   enumerable: true
 });

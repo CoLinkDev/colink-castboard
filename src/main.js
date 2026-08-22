@@ -8,13 +8,6 @@ window.navManager = null;
 window.latestSysInfoStats = null;
 let bootLocked = true;
 let contextMenu = null;
-const {
-  clearTimer,
-  log,
-  normalizeRate,
-  parseCssLength,
-} = window.castBoardUtils;
-
 function cacheLayoutMetrics() {
   const root = getComputedStyle(document.documentElement);
   cachedGap = parseCssLength(root.getPropertyValue("--line-gap"), 36);
@@ -98,11 +91,6 @@ function createPageIndicator() {
 
 function updatePageIndicatorState(activePageName) {
   if (!pageIndicatorEl) return;
-  const isDebug = activePageName === "debug";
-  if (isDebug) {
-    pageIndicatorEl.style.display = "none";
-    return;
-  }
   pageIndicatorEl.style.display = "flex";
 
   const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
@@ -113,7 +101,6 @@ function updatePageIndicatorState(activePageName) {
 
 function showIndicatorTemporarily(durationMs = 2800) {
   if (!pageIndicatorEl) return;
-  if (window.currentPageName === "debug") return;
 
   pageIndicatorEl.classList.add("visible");
   if (pageIndicatorTimer) {
@@ -142,7 +129,6 @@ class NavigationManager {
     this.transientTimer = 0;
     this.transientOriginalPage = null;
     this.isTransientActive = false;
-    this.preDebugPage = null;
     this.transientQueue = [];
   }
 
@@ -199,7 +185,7 @@ class NavigationManager {
     } else if (direction < 0) {
       enterClass = "page-enter-prev";
       leaveClass = "page-leave-prev";
-    } else if (oldPageName && newPageName && oldPageName !== "debug" && newPageName !== "debug" && oldPageName !== "time" && newPageName !== "time") {
+    } else if (oldPageName && newPageName && oldPageName !== "time" && newPageName !== "time") {
       const navigable = this.getNavigablePages();
       const fromIdx = navigable.indexOf(oldPageName);
       const toIdx = navigable.indexOf(newPageName);
@@ -228,9 +214,6 @@ class NavigationManager {
       to: newPageName,
       temporary: isTemporary,
     });
-    if (typeof window.updateDebugButtonState === "function") {
-      window.updateDebugButtonState(newPageName);
-    }
     if (typeof updatePageIndicatorState === "function") {
       updatePageIndicatorState(newPageName);
     }
@@ -288,7 +271,6 @@ class NavigationManager {
     if (this.isTransientActive) {
       this.cancelTransient();
     }
-    if (this.currentPageName === "debug") return;
     const pages = this.getNavigablePages();
     const currentIndex = pages.indexOf(basePage);
     if (currentIndex === -1) {
@@ -304,7 +286,6 @@ class NavigationManager {
     if (this.isTransientActive) {
       this.cancelTransient();
     }
-    if (this.currentPageName === "debug") return;
     const pages = this.getNavigablePages();
     const currentIndex = pages.indexOf(basePage);
     if (currentIndex === -1) {
@@ -319,21 +300,7 @@ class NavigationManager {
     this.nextPage();
   }
 
-  navigateToDebug() {
-    if (this.currentPageName === "debug") return;
-    this.preDebugPage = this.isTransientActive ? (this.transientOriginalPage || "lyrics") : this.currentPageName;
-    this.navigateTo("debug");
-  }
-
-  restoreFromDebug() {
-    if (this.currentPageName !== "debug") return;
-    const target = this.preDebugPage || "lyrics";
-    this.navigateTo(target);
-  }
-
   showTransient(targetPage, durationMs) {
-    if (this.currentPageName === "debug") return;
-
     if (this.isTransientActive) {
       if (this.currentPageName === targetPage) {
         // If it's already showing, just extend the timer instead of queuing a duplicate
@@ -474,16 +441,10 @@ function onTouchStart(event) {
   touchStartTime = Date.now();
   isTouchActive = true;
   showIndicatorTemporarily();
-  if (typeof window.showDebugButtonTemporarily === "function") {
-    window.showDebugButtonTemporarily();
-  }
 }
 
 function onTouchMove() {
   showIndicatorTemporarily();
-  if (typeof window.showDebugButtonTemporarily === "function") {
-    window.showDebugButtonTemporarily();
-  }
 }
 
 function onTouchEnd(event) {
@@ -512,7 +473,7 @@ function onTouchCancel() {
 
 function onMouseDown(event) {
   if (event.button !== 0) return;
-  if (event.target.closest?.(".castboard-context-menu, .debug-toggle-btn, .page-indicator")) {
+  if (event.target.closest?.(".castboard-context-menu, .page-indicator")) {
     return;
   }
   mouseStartX = event.clientX;
@@ -520,16 +481,10 @@ function onMouseDown(event) {
   mouseStartTime = Date.now();
   isMouseDown = true;
   showIndicatorTemporarily();
-  if (typeof window.showDebugButtonTemporarily === "function") {
-    window.showDebugButtonTemporarily();
-  }
 }
 
 function onMouseMove() {
   showIndicatorTemporarily();
-  if (typeof window.showDebugButtonTemporarily === "function") {
-    window.showDebugButtonTemporarily();
-  }
 }
 
 function onMouseUp(event) {
@@ -552,10 +507,6 @@ function onMouseUp(event) {
 
 function onPageClick() {
   if (hideContextMenu()) return;
-  if (window.currentPageName === "debug") return;
-  if (typeof window.showDebugButtonTemporarily === "function") {
-    window.showDebugButtonTemporarily();
-  }
   if (window.currentPageName === "time" && window.navManager) {
     window.navManager.restoreTransient();
     return;
@@ -664,11 +615,7 @@ function bindEvents() {
 }
 
 const loadedPages = new Set();
-const isDebugActive = window.castBoardHost.config.debug;
 const totalPages = ["lyrics", "detail", "time", "sysinfo"];
-if (isDebugActive) {
-  totalPages.push("debug");
-}
 let bootCalled = false;
 
 window.onIframeLoad = function(pageName) {
@@ -696,6 +643,10 @@ function boot() {
   bindEvents();
   cacheLayoutMetrics();
   startTimeScheduler();
+  log("app", "page-initialized", {
+    resolution: { width: window.innerWidth, height: window.innerHeight },
+    language: window.castBoardHost.config.language || document.documentElement.lang,
+  });
 
   window.setTimeout(() => {
     bootLocked = false;

@@ -196,7 +196,7 @@ body {
   opacity: 0.85;
 }
 
-/* Fade & subtle zoom (Fallback / Transient pages like time/debug) */
+/* Fade & subtle zoom for transient pages such as time. */
 .page.page-enter-fade,
 .page.page-enter {
   opacity: 0;

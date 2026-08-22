@@ -1,6 +1,5 @@
 // CastBoard's only boundary to its native hosts and external protocol data.
 (() => {
-  const { compareSemver, log } = window.castBoardUtils;
   const params = new URLSearchParams(window.location.search);
   const language = params.get("lang") || "";
   const peerBusinessVersion = params.get("peerBusinessVersion") || "";
@@ -8,7 +7,6 @@
     language,
     peerBusinessVersion,
     desktop: params.has("castboard-desktop"),
-    debug: params.has("debug"),
     devtools: params.has("castboard-devtools"),
   });
   const featureGates = Object.freeze({
