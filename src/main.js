@@ -501,8 +501,6 @@ function onTrackChange() {
     window.navManager.showTransient("detail", 2000);
   }
 
-  showIndicatorTemporarily(3000);
-
   if (pages[currentPageName] && typeof pages[currentPageName].onTrackChange === "function") {
     pages[currentPageName].onTrackChange();
   }
