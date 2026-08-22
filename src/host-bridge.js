@@ -1,5 +1,6 @@
 // CastBoard's only boundary to its native hosts and external protocol data.
 (() => {
+  const { compareSemver, formatDuration } = window.castBoardUtils;
   const params = new URLSearchParams(window.location.search);
   const language = params.get("lang") || "";
   const peerBusinessVersion = params.get("peerBusinessVersion") || "";
@@ -15,16 +16,6 @@
     sysinfoNetDisk: compareSemver(peerBusinessVersion, "1.2.0") >= 0,
   });
   const handlers = {};
-
-  function compareSemver(a, b) {
-    const left = String(a || "0.0.0").split(".").map(Number);
-    const right = String(b || "0.0.0").split(".").map(Number);
-    for (let index = 0; index < 3; index += 1) {
-      const difference = (left[index] || 0) - (right[index] || 0);
-      if (difference !== 0) return difference;
-    }
-    return 0;
-  }
 
   function registerHandlers(nextHandlers) {
     Object.assign(handlers, nextHandlers);
@@ -103,13 +94,6 @@
       lines: Array.isArray(payload?.lines) ? payload.lines.map(convertLine) : [],
       translatedLines: Array.isArray(payload?.translatedLines) ? payload.translatedLines.map(convertLine) : [],
     };
-  }
-
-  function formatDuration(milliseconds) {
-    const totalSeconds = Math.max(0, Math.floor(Number(milliseconds || 0) / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = String(totalSeconds % 60).padStart(2, "0");
-    return `${minutes}:${seconds}`;
   }
 
   function requestDesktopAction(action) {

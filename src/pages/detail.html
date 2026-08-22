@@ -158,7 +158,8 @@
 
     <script>
       (function() {
-        const { readCssNumber, clampUnit, formatSeconds, cancelRaf, clearTimer, pages } = parent;
+        const { readCssNumber, clampUnit, formatSeconds, cancelRaf, clearTimer } = parent.castBoardUtils;
+        const { pages } = parent;
 
         let detailLayer = null;
         let detailArt = null;
