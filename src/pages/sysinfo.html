@@ -10,392 +10,348 @@
           justify-content: center;
           align-items: center;
           background: #000000;
-          padding: clamp(40px, 9.08vh + 6px, 104px) clamp(60px, 13.62vh + 8.9px, 156px);
+          padding: clamp(32px, 6vh, 80px) clamp(32px, 6vw, 120px);
           box-sizing: border-box;
         }
 
-        .sysinfo-top-table {
+        .sysinfo-container {
           width: 100%;
-          max-width: clamp(1120px, 79.43vh + 822.2px, 1680px);
-          border-collapse: collapse;
-          border: none;
-          table-layout: fixed;
-        }
-
-        .sysinfo-top-table td {
-          border: none;
-          padding: 0;
-          vertical-align: middle;
-        }
-
-        .sysinfo-table {
-          width: 100%;
-          max-width: clamp(1120px, 79.43vh + 822.2px, 1680px);
-          margin-top: clamp(44px, 10.07vh + 6.2px, 115px);
-          border-collapse: collapse;
-          border: none;
-          table-layout: fixed;
-        }
-
-        .sysinfo-table td {
-          border: none;
-          padding: 0;
-          vertical-align: middle;
-        }
-
-        .sysinfo-table tr:not(:last-child) td {
-          padding-bottom: clamp(32px, 7.23vh + 4.9px, 83px);
-        }
-
-        .sysinfo-metric[data-empty="true"],
-        .metric-value-cell[data-empty="true"] {
-          opacity: 0.35;
-        }
-
-        .sysinfo-metric {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: clamp(20px, 4.54vh + 3px, 52px);
-          transition: all 300ms ease;
-          /* animation: fade-appear 600ms cubic-bezier(0.16, 1, 0.3, 1) both; */
-        }
-
-        /*
-        .sysinfo-metric:nth-child(1) { animation-delay: 50ms; }
-        .sysinfo-metric:nth-child(2) { animation-delay: 100ms; }
-        .sysinfo-metric:nth-child(3) { animation-delay: 150ms; }
-        */
-
-        .metric-top {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: clamp(12px, 2.7vh + 1.9px, 31px);
-          flex-shrink: 0;
-        }
-
-        .metric-meta {
+          max-width: clamp(920px, 80vw, 1520px);
           display: flex;
           flex-direction: column;
-          justify-content: center;
-          gap: 2px;
+          gap: clamp(36px, 6vh, 80px);
         }
 
-        .metric-label-row {
+        /* Compute Grid (CPU, MEM, GPU) */
+        .sysinfo-compute-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: clamp(24px, 3.6vw, 64px);
+          align-items: center;
+        }
+
+        .sysinfo-card {
           display: flex;
           flex-direction: row;
           align-items: center;
-          gap: clamp(8px, 1.84vh + 1.1px, 21px);
-        }
-
-        .metric-label {
-          font-size: clamp(24px, 5.39vh + 3.8px, 62px);
-          font-weight: 800;
-          color: #ffffff;
-          line-height: 1.1;
-          letter-spacing: -0.01em;
-          white-space: nowrap;
-        }
-
-        .metric-desc {
-          font-size: clamp(11px, 2.41vh + 2px, 28px);
-          font-weight: 700;
-          color: rgba(248, 250, 252, 0.5);
-          line-height: 1.1;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        /* Gauge */
-        .gauge-container {
-          position: relative;
-          width: clamp(20px, 4.54vh + 3px, 52px);
-          height: clamp(20px, 4.54vh + 3px, 52px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .gauge-svg {
-          width: 100%;
-          height: 100%;
-        }
-
-        .gauge-track {
-          fill: none;
-          stroke: rgba(255, 255, 255, 0.18);
-          stroke-width: 16;
-        }
-
-        .gauge-fill {
-          fill: none;
-          stroke: #ffffff;
-          stroke-width: 16;
-          stroke-linecap: round;
-          transform: rotate(-90deg);
-          transform-origin: center;
-          transition: stroke-dashoffset 450ms cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .sysinfo-metric.high-load .gauge-fill {
-          stroke: #ef4444;
-        }
-
-        .metric-value-container {
-          display: flex;
-          align-items: baseline;
-        }
-
-        .metric-value {
-          font-family: "CastBoard Google Sans Flex", sans-serif;
-          font-size: clamp(48px, 10.78vh + 7.6px, 124px);
-          font-weight: 800;
-          color: #ffffff;
-          line-height: 0.9;
-          letter-spacing: -0.04em;
-        }
-
-        .metric-unit {
-          margin-left: 6px;
-          font-size: clamp(16px, 3.69vh + 2.2px, 42px);
-          font-weight: 800;
-          color: rgba(248, 250, 252, 0.5);
-          line-height: 1;
+          gap: clamp(16px, 2.2vw, 32px);
+          min-width: 0;
+          transition: opacity 300ms ease;
         }
 
         .sysinfo-metric[data-empty="true"] {
           opacity: 0.35;
         }
 
-        /* Animations */
-        /*
-        @keyframes fade-appear {
-          from {
-            opacity: 0;
-            transform: translateY(16px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        /* Gauge with centered icon */
+        .gauge-container {
+          position: relative;
+          width: clamp(56px, 9vh, 92px);
+          height: clamp(56px, 9vh, 92px);
+          min-width: clamp(56px, 9vh, 92px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
         }
-        */
 
-        /* Responsive */
+        .gauge-svg {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+
+        .gauge-track {
+          fill: none;
+          stroke: rgba(255, 255, 255, 0.12);
+          stroke-width: 10;
+        }
+
+        .gauge-fill {
+          fill: none;
+          stroke: #ffffff;
+          stroke-width: 10;
+          stroke-linecap: round;
+          transform: rotate(-90deg);
+          transform-origin: center;
+          transition: stroke-dashoffset 450ms cubic-bezier(0.16, 1, 0.3, 1), stroke 300ms ease;
+        }
+
+        .sysinfo-metric.high-load .gauge-fill {
+          stroke: #ef4444;
+        }
+
+        .gauge-icon-wrapper {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+        }
+
+        .gauge-icon-wrapper .sysinfo-icon {
+          width: 44%;
+          height: 44%;
+          color: rgba(255, 255, 255, 0.7);
+          transition: color 300ms ease;
+        }
+
+        .sysinfo-metric.high-load .gauge-icon-wrapper .sysinfo-icon {
+          color: #ef4444;
+        }
+
+
+        /* I/O Grid (Network & Disk) */
+        .sysinfo-io-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          row-gap: clamp(24px, 4.2vh, 48px);
+          column-gap: clamp(36px, 5.5vw, 88px);
+          align-items: center;
+        }
+
+        .io-icon-badge {
+          width: clamp(48px, 7.5vh, 72px);
+          height: clamp(48px, 7.5vh, 72px);
+          min-width: clamp(48px, 7.5vh, 72px);
+          border-radius: clamp(14px, 2vh, 20px);
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        }
+
+        .io-icon-badge .sysinfo-icon {
+          width: clamp(24px, 3.8vh, 36px);
+          height: clamp(24px, 3.8vh, 36px);
+          color: rgba(255, 255, 255, 0.7);
+        }
+
+        .sysinfo-icon {
+          display: block;
+        }
+
+        /* Value & Unit Typography */
+        .metric-value-container {
+          display: flex;
+          align-items: baseline;
+          min-width: 0;
+        }
+
+        .metric-value {
+          font-family: "CastBoard Google Sans Flex", sans-serif;
+          font-size: clamp(48px, 9.6vh, 108px);
+          font-weight: 800;
+          color: #ffffff;
+          line-height: 0.95;
+          letter-spacing: -0.04em;
+          white-space: nowrap;
+        }
+
+        .sysinfo-io-card .metric-value {
+          font-size: clamp(38px, 7.2vh, 80px);
+        }
+
+        .metric-unit {
+          margin-left: clamp(6px, 0.8vw, 12px);
+          font-size: clamp(16px, 3vh, 34px);
+          font-weight: 700;
+          color: rgba(248, 250, 252, 0.45);
+          line-height: 1;
+          white-space: nowrap;
+          letter-spacing: -0.01em;
+        }
+
+        .sysinfo-io-card .metric-unit {
+          font-size: clamp(15px, 2.6vh, 28px);
+        }
+
+        /* Portrait & Narrow screens */
         @media (max-aspect-ratio: 1/1) {
           .page-sysinfo {
-            padding: 40px 24px;
+            padding: clamp(24px, 4.5vh, 48px) clamp(20px, 4vw, 36px);
           }
 
-          .sysinfo-top-table,
-          .sysinfo-top-table tbody,
-          .sysinfo-top-table tr {
-            display: block;
-            width: 100%;
+          .sysinfo-container {
+            gap: 32px;
+            max-width: 440px;
           }
 
-          .sysinfo-top-table {
-            max-width: 300px;
+          .sysinfo-compute-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
           }
 
-          .sysinfo-top-table td.sysinfo-metric {
-            display: flex;
-            margin-bottom: 40px;
-          }
-
-          .sysinfo-top-table td.sysinfo-metric:last-child {
-            margin-bottom: 0;
-          }
-
-          .sysinfo-top-table .table-spacer {
-            display: none;
-          }
-
-          .sysinfo-table,
-          .sysinfo-table tbody {
-            display: block;
-            width: 100%;
-          }
-
-          .sysinfo-table {
-            max-width: 300px;
-            margin-top: 40px;
-          }
-
-          .sysinfo-table tr {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 20px;
-            align-items: center;
-            margin-bottom: 20px;
-          }
-
-          .sysinfo-table tr:last-child {
-            margin-bottom: 0;
-          }
-
-          .sysinfo-table td {
-            padding: 0 !important;
-          }
-
-          .sysinfo-table .table-spacer {
-            display: none;
-          }
-
-          .sysinfo-table .metric-value-cell {
-            padding-left: 0;
+          .sysinfo-io-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
           }
 
           .metric-value {
-            font-size: 36px;
+            font-size: clamp(36px, 6vh, 48px);
+          }
+
+          .sysinfo-io-card .metric-value {
+            font-size: clamp(28px, 4.8vh, 38px);
+          }
+
+          .gauge-container {
+            width: 52px;
+            height: 52px;
+            min-width: 52px;
+          }
+
+          .io-icon-badge {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+          }
+
+          .io-icon-badge .sysinfo-icon {
+            width: 22px;
+            height: 22px;
+          }
+
+          .metric-unit,
+          .sysinfo-io-card .metric-unit {
+            font-size: 16px;
           }
         }
       </style>
 
-      <table class="sysinfo-top-table">
-        <colgroup>
-          <col style="width: 30%;">
-          <col style="width: 5%;">
-          <col style="width: 30%;">
-          <col style="width: 5%;">
-          <col style="width: 30%;">
-        </colgroup>
-        <tr>
-          <td class="sysinfo-metric" data-key="cpu">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <div class="metric-label-row">
-                  <div class="gauge-container">
-                    <svg class="gauge-svg" viewBox="0 0 120 120" width="100%" height="100%">
-                      <circle class="gauge-track" cx="60" cy="60" r="50" />
-                      <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
-                    </svg>
-                  </div>
-                  <span class="metric-label">CPU</span>
-                </div>
-                <span class="metric-desc">Processor</span>
+      <div class="sysinfo-container">
+        <!-- Top Tier: Compute Utilization (CPU, MEM, GPU) -->
+        <section class="sysinfo-compute-grid">
+          <!-- CPU -->
+          <div class="sysinfo-card sysinfo-metric" data-key="cpu" role="img">
+            <div class="gauge-container">
+              <svg class="gauge-svg" viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="50" />
+                <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
+              </svg>
+              <div class="gauge-icon-wrapper">
+                <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="2.5" />
+                  <rect x="9" y="9" width="6" height="6" />
+                  <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3" />
+                </svg>
               </div>
             </div>
             <div class="metric-value-container">
               <span class="metric-value" data-value>--</span><span class="metric-unit">%</span>
             </div>
-          </td>
-          <td class="table-spacer"></td>
-          <td class="sysinfo-metric" data-key="mem">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <div class="metric-label-row">
-                  <div class="gauge-container">
-                    <svg class="gauge-svg" viewBox="0 0 120 120" width="100%" height="100%">
-                      <circle class="gauge-track" cx="60" cy="60" r="50" />
-                      <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
-                    </svg>
-                  </div>
-                  <span class="metric-label">MEM</span>
-                </div>
-                <span class="metric-desc">Memory</span>
-              </div>
-            </div>
-            <div class="metric-value-container">
-              <span class="metric-value" data-value>--</span><span class="metric-unit">%</span>
-            </div>
-          </td>
-          <td class="table-spacer"></td>
-          <td class="sysinfo-metric" data-key="gpu">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <div class="metric-label-row">
-                  <div class="gauge-container">
-                    <svg class="gauge-svg" viewBox="0 0 120 120" width="100%" height="100%">
-                      <circle class="gauge-track" cx="60" cy="60" r="50" />
-                      <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
-                    </svg>
-                  </div>
-                  <span class="metric-label">GPU</span>
-                </div>
-                <span class="metric-desc">Graphics</span>
-              </div>
-            </div>
-            <div class="metric-value-container">
-              <span class="metric-value" data-value>--</span><span class="metric-unit">%</span>
-            </div>
-          </td>
-        </tr>
-      </table>
+          </div>
 
-      <table class="sysinfo-table">
-        <colgroup>
-          <col style="width: 20%;">
-          <col style="width: 25%;">
-          <col style="width: 10%;">
-          <col style="width: 20%;">
-          <col style="width: 25%;">
-        </colgroup>
-        <tr>
-          <td class="sysinfo-metric" data-key="netDown">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <span class="metric-label">NET IN</span>
-                <span class="metric-desc">Download</span>
+          <!-- Memory -->
+          <div class="sysinfo-card sysinfo-metric" data-key="mem" role="img">
+            <div class="gauge-container">
+              <svg class="gauge-svg" viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="50" />
+                <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
+              </svg>
+              <div class="gauge-icon-wrapper">
+                <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 7a1.5 1.5 0 0 1 1.5-1.5h17A1.5 1.5 0 0 1 22 7v8.5a1.5 1.5 0 0 1-1.5 1.5h-17A1.5 1.5 0 0 1 2 15.5Z" />
+                  <path d="M6 17v2M10 17v2M14 17v2M18 17v2" />
+                  <rect x="5.5" y="8.5" width="2.5" height="5" rx="0.5" fill="currentColor" stroke="none" />
+                  <rect x="10.75" y="8.5" width="2.5" height="5" rx="0.5" fill="currentColor" stroke="none" />
+                  <rect x="16" y="8.5" width="2.5" height="5" rx="0.5" fill="currentColor" stroke="none" />
+                </svg>
               </div>
             </div>
-            <div style="display: none;" data-fill></div>
-          </td>
-          <td class="metric-value-cell">
+            <div class="metric-value-container">
+              <span class="metric-value" data-value>--</span><span class="metric-unit">%</span>
+            </div>
+          </div>
+
+          <!-- GPU -->
+          <div class="sysinfo-card sysinfo-metric" data-key="gpu" role="img">
+            <div class="gauge-container">
+              <svg class="gauge-svg" viewBox="0 0 120 120">
+                <circle class="gauge-track" cx="60" cy="60" r="50" />
+                <circle class="gauge-fill" cx="60" cy="60" r="50" stroke-dasharray="314.159" stroke-dashoffset="314.159" data-fill />
+              </svg>
+              <div class="gauge-icon-wrapper">
+                <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 4v16" />
+                  <rect x="4" y="6" width="18" height="12" rx="2" />
+                  <circle cx="10" cy="12" r="3" />
+                  <circle cx="16.5" cy="12" r="3" />
+                  <path d="M7 18v2.5M11 18v2.5" />
+                </svg>
+              </div>
+            </div>
+            <div class="metric-value-container">
+              <span class="metric-value" data-value>--</span><span class="metric-unit">%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bottom Tier: I/O Throughput (Network & Disk) -->
+        <section class="sysinfo-io-grid">
+          <!-- Network Download -->
+          <div class="sysinfo-card sysinfo-io-card sysinfo-metric" data-key="netDown" role="img">
+            <div class="io-icon-badge">
+              <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
             <div class="metric-value-container">
               <span class="metric-value" data-value-for="netDown">--</span><span class="metric-unit" data-unit-for="netDown"></span>
             </div>
-          </td>
-          <td class="table-spacer"></td>
-          <td class="sysinfo-metric" data-key="netUp">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <span class="metric-label">NET OUT</span>
-                <span class="metric-desc">Upload</span>
-              </div>
+          </div>
+
+          <!-- Network Upload -->
+          <div class="sysinfo-card sysinfo-io-card sysinfo-metric" data-key="netUp" role="img">
+            <div class="io-icon-badge">
+              <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
             </div>
-            <div style="display: none;" data-fill></div>
-          </td>
-          <td class="metric-value-cell">
             <div class="metric-value-container">
               <span class="metric-value" data-value-for="netUp">--</span><span class="metric-unit" data-unit-for="netUp"></span>
             </div>
-          </td>
-        </tr>
-        <tr>
-          <td class="sysinfo-metric" data-key="diskRead">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <span class="metric-label">DISK R</span>
-                <span class="metric-desc">Disk Read</span>
-              </div>
+          </div>
+
+          <!-- Disk Read -->
+          <div class="sysinfo-card sysinfo-io-card sysinfo-metric" data-key="diskRead" role="img">
+            <div class="io-icon-badge">
+              <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="14" width="20" height="8" rx="2" />
+                <path d="M6 18h.01M10 18h.01" />
+                <polyline points="7 9 12 14 17 9" />
+                <line x1="12" y1="14" x2="12" y2="2" />
+              </svg>
             </div>
-            <div style="display: none;" data-fill></div>
-          </td>
-          <td class="metric-value-cell">
             <div class="metric-value-container">
               <span class="metric-value" data-value-for="diskRead">--</span><span class="metric-unit" data-unit-for="diskRead"></span>
             </div>
-          </td>
-          <td class="table-spacer"></td>
-          <td class="sysinfo-metric" data-key="diskWrite">
-            <div class="metric-top">
-              <div class="metric-meta">
-                <span class="metric-label">DISK W</span>
-                <span class="metric-desc">Disk Write</span>
-              </div>
+          </div>
+
+          <!-- Disk Write -->
+          <div class="sysinfo-card sysinfo-io-card sysinfo-metric" data-key="diskWrite" role="img">
+            <div class="io-icon-badge">
+              <svg class="sysinfo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="14" width="20" height="8" rx="2" />
+                <path d="M6 18h.01M10 18h.01" />
+                <polyline points="17 7 12 2 7 7" />
+                <line x1="12" y1="2" x2="12" y2="14" />
+              </svg>
             </div>
-            <div style="display: none;" data-fill></div>
-          </td>
-          <td class="metric-value-cell">
             <div class="metric-value-container">
               <span class="metric-value" data-value-for="diskWrite">--</span><span class="metric-unit" data-unit-for="diskWrite"></span>
             </div>
-          </td>
-        </tr>
-      </table>
+          </div>
+        </section>
+      </div>
     </div>
 
     <script>
@@ -486,22 +442,23 @@
 
         function localizeUI(container) {
           const t = parent.castBoardI18n.messages("sysinfo");
-          
-          // Localize descriptions
-          const cpuDesc = container.querySelector(`[data-key="cpu"] .metric-desc`);
-          const memDesc = container.querySelector(`[data-key="mem"] .metric-desc`);
-          const gpuDesc = container.querySelector(`[data-key="gpu"] .metric-desc`);
-          const netDownDesc = container.querySelector(`[data-key="netDown"] .metric-desc`);
-          const netUpDesc = container.querySelector(`[data-key="netUp"] .metric-desc`);
-          const diskReadDesc = container.querySelector(`[data-key="diskRead"] .metric-desc`);
-          const diskWriteDesc = container.querySelector(`[data-key="diskWrite"] .metric-desc`);
-          if (cpuDesc) cpuDesc.textContent = t.cpuDesc;
-          if (memDesc) memDesc.textContent = t.memDesc;
-          if (gpuDesc) gpuDesc.textContent = t.gpuDesc;
-          if (netDownDesc) netDownDesc.textContent = t.netDownDesc;
-          if (netUpDesc) netUpDesc.textContent = t.netUpDesc;
-          if (diskReadDesc) diskReadDesc.textContent = t.diskReadDesc;
-          if (diskWriteDesc) diskWriteDesc.textContent = t.diskWriteDesc;
+          if (!t) return;
+          const map = {
+            cpu: t.cpuDesc,
+            mem: t.memDesc,
+            gpu: t.gpuDesc,
+            netDown: t.netDownDesc,
+            netUp: t.netUpDesc,
+            diskRead: t.diskReadDesc,
+            diskWrite: t.diskWriteDesc,
+          };
+          for (const [key, desc] of Object.entries(map)) {
+            const el = container.querySelector(`[data-key="${key}"]`);
+            if (el && desc) {
+              el.setAttribute("title", desc);
+              el.setAttribute("aria-label", desc);
+            }
+          }
         }
 
         // Format speed rate in B/s, KB/s, MB/s, GB/s
@@ -527,13 +484,11 @@
           for (const key of ["cpu", "mem", "gpu"]) {
             const metric = container.querySelector(`[data-key="${key}"]`);
             const fillEl = metric?.querySelector("[data-fill]");
-            const unitEl = metric?.querySelector("[data-unit]");
             if (!metric || !fillEl) continue;
 
             const value = normalize(latestStats[key]);
             metric.dataset.empty = value == null ? "true" : "false";
-            if (unitEl) unitEl.textContent = "";
-            
+
             // Circumference of r=50 circle is 2 * PI * 50 = 314.159
             const dashoffset = value == null ? 314.159 : 314.159 * (1 - value / 100);
             fillEl.setAttribute("stroke-dashoffset", String(dashoffset));
@@ -555,25 +510,16 @@
 
           for (const key of ["netDown", "netUp", "diskRead", "diskWrite"]) {
             const metric = container.querySelector(`[data-key="${key}"]`);
-            const fillEl = metric?.querySelector("[data-fill]");
-            if (!metric || !fillEl) continue;
+            if (!metric) continue;
 
             const raw = latestStats[key];
             const empty = raw == null;
             metric.dataset.empty = empty ? "true" : "false";
 
-            const valueCell = container.querySelector(`[data-value-for="${key}"]`)?.closest('.metric-value-cell');
-            if (valueCell) {
-              valueCell.dataset.empty = empty ? "true" : "false";
-            }
-
-            fillEl.setAttribute("stroke-dashoffset", "314.159");
-            metric.classList.remove("high-load");
-
             animateValue(key, raw, (current) => {
               if (!mountedContainer) return;
-              const curValueEl = container.querySelector(`[data-value-for="${key}"]`);
-              const curUnitEl = container.querySelector(`[data-unit-for="${key}"]`);
+              const curValueEl = metric.querySelector(`[data-value-for="${key}"]`);
+              const curUnitEl = metric.querySelector(`[data-unit-for="${key}"]`);
               if (curValueEl && curUnitEl) {
                 const formatted = formatRate(current);
                 curValueEl.textContent = formatted.value;
