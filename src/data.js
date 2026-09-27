@@ -262,21 +262,9 @@ function emptyTrack() {
 
 window.addEventListener("beforeunload", stopProgressInterpolation);
 
-function handleMusicBusinessEvent(type, payload) {
-  switch (type) {
-    case "music.v1.lyric":
-      onLyric(payload);
-      break;
-    case "music.v1.progress":
-      onPlayerProgress(payload);
-      break;
-    case "music.v1.track":
-      onTrack(payload);
-      break;
-  }
-}
-
-window.castBoardHost.registerHandlers({ onMusicBusinessEvent: handleMusicBusinessEvent });
+window.castBoardHost.on("music.lyric", onLyric);
+window.castBoardHost.on("music.progress", onPlayerProgress);
+window.castBoardHost.on("music.track", onTrack);
 
 function _calcActiveIndex(t) {
   if (LYRICS.length === 0 || !Number.isFinite(t)) return 0;

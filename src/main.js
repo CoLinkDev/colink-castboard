@@ -537,7 +537,7 @@ function applySysInfoStats(payload) {
   }));
 }
 
-window.castBoardHost.registerHandlers({ onSysInfoStats: applySysInfoStats });
+window.castBoardHost.on("sysinfo.stats", applySysInfoStats);
 
 // Handle resize event
 function onResize() {
@@ -731,6 +731,8 @@ function cleanupScheduledWork() {
     optimisticDebounceTimer = 0;
   }
   stopTimeScheduler();
+  window.castBoardHost.stopMusicAlive();
+  window.castBoardHost.stopSysInfoAlive();
   if (window.navManager) {
     window.navManager.destroy();
   }
@@ -824,8 +826,10 @@ function boot() {
       ? "lyrics"
       : stored;
     window.navManager.navigateTo(initialPage);
-    window.castBoardHost.notifyPageReady().catch((error) => {
-      log("app", "page-ready-request-failed", { error: String(error) });
-    });
+    window.castBoardHost.notifyPageReady()
+      .then(() => window.castBoardHost.startMusicAlive())
+      .catch((error) => {
+        log("app", "page-ready-request-failed", { error: String(error) });
+      });
   });
 }

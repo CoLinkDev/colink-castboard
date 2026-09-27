@@ -145,7 +145,7 @@
       return () => this.subscribers.delete(callback);
     }
 
-    send(message) {
+    dispatch(message) {
       for (const subscriber of this.subscribers) {
         try {
           subscriber(message);
@@ -155,43 +155,29 @@
       }
     }
 
-    sendEvent(type, payload = {}) {
-      this.send({
+    dispatchEvent(type, payload = {}, id) {
+      this.dispatch({
         channel: "castboard",
-        kind: "event",
         type,
         payload,
+        ...(id ? { id } : {}),
       });
     }
 
-    sendBusinessEvent(type, payload) {
-      this.send({
-        channel: "castboard",
-        kind: "event",
-        type: "business",
-        payload: { type, payload },
-      });
-    }
-
-    request({ type, payload }) {
-      log("mock-ipc", "request-received", { type, payload });
-      switch (type) {
-        case "castboard.ready":
+    send(event) {
+      log("mock-ipc", "event-received", event);
+      switch (event.type) {
+        case "page.ready":
           setTimeout(() => {
-            this.sendEvent("host.ready");
+            this.dispatchEvent("host.ready", { ok: true }, event.id);
           }, 80);
-          return Promise.resolve({ ok: true });
-        case "castboard.close":
-        case "castboard.openDevTools":
-        case "castboard.sysinfo.alive":
-          return Promise.resolve({ ok: true });
-        default:
-          return Promise.resolve({ ok: true });
+          break;
       }
+      return Promise.resolve();
     }
 
     mockTrack(track = {}) {
-      this.sendBusinessEvent("music.v1.track", {
+      this.dispatchEvent("music.track", {
         trackId: track.trackId || "mock-track-1",
         title: track.title || "Sample Song Title",
         artists: track.artists || ["Sample Artist"],
@@ -204,7 +190,7 @@
     }
 
     mockLyric(lines = [], translatedLines = []) {
-      this.sendBusinessEvent("music.v1.lyric", {
+      this.dispatchEvent("music.lyric", {
         lines: lines.length > 0 ? lines : [
           { time: 0, text: "Line 1 of sample lyrics" },
           { time: 5000, text: "Line 2 of sample lyrics" },
@@ -221,14 +207,14 @@
     }
 
     mockProgress(progressMs = 0, paused = false) {
-      this.sendBusinessEvent("music.v1.progress", {
+      this.dispatchEvent("music.progress", {
         progress: progressMs,
         paused,
       });
     }
 
     mockSysInfo(stats = {}) {
-      this.sendBusinessEvent("sysinfo.v1.stats", {
+      this.dispatchEvent("sysinfo.stats", {
         cpu: stats.cpu != null ? stats.cpu : Math.floor(Math.random() * 50 + 20),
         mem: stats.mem != null ? stats.mem : 56,
         gpu: stats.gpu != null ? stats.gpu : 30,

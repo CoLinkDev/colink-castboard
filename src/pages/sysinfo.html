@@ -401,8 +401,6 @@
     <script>
       (function() {
         let mountedContainer = null;
-        let aliveTimer = null;
-        let unsubscribeHostReady = null;
 
         const currentValues = {
           cpu: null,
@@ -477,27 +475,6 @@
           activeAnimations[key] = {
             rafId: requestAnimationFrame(step),
           };
-        }
-
-        function sendSysInfoAlive() {
-          void parent.window.castBoardHost.sendSysInfoAlive().catch(() => {});
-        }
-
-        function startSysInfoAlive() {
-          if (aliveTimer !== null) return;
-          sendSysInfoAlive();
-          aliveTimer = window.setInterval(sendSysInfoAlive, 5_000);
-        }
-
-        function stopSysInfoAlive() {
-          if (aliveTimer !== null) {
-            window.clearInterval(aliveTimer);
-            aliveTimer = null;
-          }
-          if (unsubscribeHostReady !== null) {
-            unsubscribeHostReady();
-            unsubscribeHostReady = null;
-          }
         }
 
         function normalize(value) {
@@ -614,11 +591,11 @@
             mountedContainer = container;
             localizeUI(container);
             render(container);
-            unsubscribeHostReady = parent.window.castBoardHost.onHostReady(startSysInfoAlive);
+            parent.window.castBoardHost.startSysInfoAlive();
           },
           unmount() {
             mountedContainer = null;
-            stopSysInfoAlive();
+            parent.window.castBoardHost.stopSysInfoAlive();
             cancelAllAnimations();
             for (const key of Object.keys(currentValues)) {
               currentValues[key] = null;
@@ -626,7 +603,7 @@
           },
           cleanup() {
             mountedContainer = null;
-            stopSysInfoAlive();
+            parent.window.castBoardHost.stopSysInfoAlive();
             cancelAllAnimations();
             for (const key of Object.keys(currentValues)) {
               currentValues[key] = null;
