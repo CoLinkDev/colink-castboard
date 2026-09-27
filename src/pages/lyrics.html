@@ -288,12 +288,11 @@
 
         .playback-progress {
           position: fixed;
-          top: 0;
           bottom: 0;
           left: 0;
+          right: 0;
           z-index: 5;
-          width: 2px;
-          background: rgba(248, 250, 252, 0.12);
+          height: 2px;
           pointer-events: none;
         }
 
@@ -304,9 +303,9 @@
         .playback-progress-fill {
           width: 100%;
           height: 100%;
-          background: rgba(255, 255, 255, 0.6);
-          transform: scaleY(0);
-          transform-origin: top;
+          background: rgba(255, 255, 255, 0.4);
+          transform: scaleX(0);
+          transform-origin: left;
         }
       </style>
 
@@ -776,7 +775,7 @@
             const isNormalStep = lastElapsedSecond !== -1 && Math.abs(elapsedSec - lastElapsedSecond) === 1;
             progressFill.style.transition = isNormalStep ? "transform 1s linear" : "none";
             lastElapsedSecond = elapsedSec;
-            progressFill.style.transform = `scaleY(${progress})`;
+            progressFill.style.transform = `scaleX(${progress})`;
 
             const elTime = splitTime(elapsed);
             updateSlot(elapsedMinEl, elTime.min, isNormalStep);
