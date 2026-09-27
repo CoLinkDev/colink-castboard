@@ -12,11 +12,6 @@ function cacheLayoutMetrics() {
   const root = getComputedStyle(document.documentElement);
   cachedGap = parseCssLength(root.getPropertyValue("--line-gap"), 36);
   cachedActiveY = parseCssLength(root.getPropertyValue("--active-y"), window.innerHeight * 0.35);
-
-  const clamped = window.innerWidth * 0.31;
-  const maxByHeight = window.innerHeight * 0.88;
-  const artSize = Math.min(clamped, maxByHeight);
-  document.documentElement.style.setProperty("--detail-art-size", artSize + "px");
 }
 
 function hideContextMenu() {
@@ -153,38 +148,39 @@ function createPageIndicator() {
   controlsRow.appendChild(nextBtn);
   pageIndicatorEl.appendChild(controlsRow);
 
-  const dotsRow = document.createElement("div");
-  dotsRow.className = "page-indicator-dots";
-
   const allPageItems = [
     { name: "lyrics", label: "Lyrics" },
-    { name: "detail", label: "Detail" },
     { name: "sysinfo", label: "System Info" },
   ];
 
   const navigable = window.navManager
     ? window.navManager.getNavigablePages()
-    : (window.castBoardHost?.featureGates?.sysinfoBasic ? ["lyrics", "detail", "sysinfo"] : ["lyrics", "detail"]);
+    : (window.castBoardHost?.featureGates?.sysinfoBasic ? ["lyrics", "sysinfo"] : ["lyrics"]);
 
   const pageItems = allPageItems.filter((item) => navigable.includes(item.name));
 
-  for (const item of pageItems) {
-    const dot = document.createElement("button");
-    dot.className = "page-indicator-dot";
-    dot.dataset.page = item.name;
-    dot.type = "button";
-    dot.setAttribute("aria-label", item.label);
-    dot.addEventListener("click", (event) => {
-      event.stopPropagation();
-      event.currentTarget?.blur?.();
-      if (window.navManager) {
-        window.navManager.navigateTo(item.name);
-        showIndicatorTemporarily();
-      }
-    });
-    dotsRow.appendChild(dot);
+  if (pageItems.length > 1) {
+    const dotsRow = document.createElement("div");
+    dotsRow.className = "page-indicator-dots";
+
+    for (const item of pageItems) {
+      const dot = document.createElement("button");
+      dot.className = "page-indicator-dot";
+      dot.dataset.page = item.name;
+      dot.type = "button";
+      dot.setAttribute("aria-label", item.label);
+      dot.addEventListener("click", (event) => {
+        event.stopPropagation();
+        event.currentTarget?.blur?.();
+        if (window.navManager) {
+          window.navManager.navigateTo(item.name);
+          showIndicatorTemporarily();
+        }
+      });
+      dotsRow.appendChild(dot);
+    }
+    pageIndicatorEl.appendChild(dotsRow);
   }
-  pageIndicatorEl.appendChild(dotsRow);
 
   updatePageIndicatorState(window.currentPageName || "lyrics");
 }
@@ -199,18 +195,18 @@ function updatePageIndicatorState(activePageName) {
   }
 
   const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
-  if (dots.length <= 1) {
-    pageIndicatorEl.style.display = "none";
-    return;
-  }
-  pageIndicatorEl.style.display = "flex";
-
   for (const dot of dots) {
     dot.classList.toggle("active", dot.dataset.page === activePageName);
   }
 
-  const shouldExpand = activePageName === "detail" && Boolean(window.castBoardHost?.featureGates?.mediaControl);
+  const shouldExpand = activePageName === "lyrics" && Boolean(window.castBoardHost?.featureGates?.mediaControl);
   pageIndicatorEl.classList.toggle("expanded", shouldExpand);
+
+  if (dots.length <= 1 && !shouldExpand) {
+    pageIndicatorEl.style.display = "none";
+    return;
+  }
+  pageIndicatorEl.style.display = "flex";
 }
 
 function isIndicatorVisible() {
@@ -255,7 +251,6 @@ class NavigationManager {
     this.currentPageName = null;
     this.pageCleanupTimer = 0;
     this.storageKey = "lyrics2screen.currentPage";
-    this.legacyStorageKey = "lyrics2screen.detailLayerVisible";
 
     // Transient (temporary navigation) state
     this.transientTimer = 0;
@@ -268,8 +263,6 @@ class NavigationManager {
     try {
       const page = window.localStorage.getItem(this.storageKey);
       if (page && this.pages[page]) return page;
-      const legacyDetail = window.localStorage.getItem(this.legacyStorageKey);
-      if (legacyDetail === "1") return "detail";
       return "lyrics";
     } catch (error) {
       log("navigation", "stored-page-read-failed", { error: String(error) });
@@ -280,7 +273,6 @@ class NavigationManager {
   storePage(pageName) {
     try {
       window.localStorage.setItem(this.storageKey, pageName);
-      window.localStorage.setItem(this.legacyStorageKey, pageName === "detail" ? "1" : "0");
     } catch (error) {
       log("navigation", "stored-page-write-failed", { error: String(error) });
     }
@@ -395,8 +387,8 @@ class NavigationManager {
 
   getNavigablePages() {
     return window.castBoardHost.featureGates.sysinfoBasic
-      ? ["lyrics", "detail", "sysinfo"]
-      : ["lyrics", "detail"];
+      ? ["lyrics", "sysinfo"]
+      : ["lyrics"];
   }
 
   nextPage() {
@@ -501,10 +493,6 @@ window.navManager = new NavigationManager(window.pages);
 
 // ==== Global Event Dispatching ====
 function onTrackChange() {
-  if (window.navManager && !bootLocked) {
-    window.navManager.showTransient("detail", 2000);
-  }
-
   if (pages[currentPageName] && typeof pages[currentPageName].onTrackChange === "function") {
     pages[currentPageName].onTrackChange();
   }
@@ -782,7 +770,7 @@ function bindEvents() {
 }
 
 const loadedPages = new Set();
-const totalPages = ["lyrics", "detail", "time", "sysinfo"];
+const totalPages = ["lyrics", "time", "sysinfo"];
 let bootCalled = false;
 
 window.onIframeLoad = function(pageName) {

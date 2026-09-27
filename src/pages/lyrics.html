@@ -14,9 +14,34 @@
           z-index: 1;
         }
 
+        .ambient-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          overflow: hidden;
+          pointer-events: none;
+          background: #000000;
+        }
+
+        .ambient-cover {
+          position: absolute;
+          inset: 0;
+          background: center / cover no-repeat;
+          filter: blur(25px) saturate(1.2) brightness(0.92);
+          transform: scale(1.12);
+          opacity: 0;
+          transition: opacity 1200ms var(--ease);
+          will-change: opacity;
+        }
+
+        .ambient-cover.is-active {
+          opacity: 0.12;
+        }
+
         .stage {
           position: fixed;
           inset: 0;
+          z-index: 1;
           overflow: hidden;
         }
 
@@ -148,6 +173,141 @@
           color: rgba(216, 222, 232, 0.4);
           margin: 0 0.4em;
         }
+
+        .playback-time {
+          position: fixed;
+          left: 4vw;
+          bottom: 2vw;
+          z-index: 4;
+          display: flex;
+          align-items: baseline;
+          font-family: "CastBoard Google Sans Flex", sans-serif;
+          font-size: clamp(16px, 2.3vh, 24px);
+          font-weight: 550;
+          letter-spacing: -0.02em;
+          line-height: 1;
+          color: rgba(248, 250, 252, 0.65);
+          pointer-events: none;
+          user-select: none;
+        }
+
+        .playback-time[hidden] {
+          display: none !important;
+        }
+
+        .playback-time-part {
+          display: inline-flex;
+          align-items: baseline;
+        }
+
+        .time-col {
+          display: inline-flex;
+          align-items: baseline;
+          line-height: 1.15em;
+          vertical-align: baseline;
+        }
+
+        .time-col-min {
+          min-width: 0.58em;
+          justify-content: flex-end;
+          text-align: right;
+          position: relative;
+          overflow: hidden;
+          height: 1.2em;
+          line-height: 1.2em;
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+        }
+
+        .time-col-colon {
+          width: 0.28em;
+          justify-content: center;
+          text-align: center;
+          color: inherit;
+        }
+
+        .time-col-sec {
+          display: inline-flex;
+          width: 1.16em;
+        }
+
+        .time-digit-slot {
+          display: inline-block;
+          position: relative;
+          overflow: hidden;
+          width: 0.58em;
+          height: 1.2em;
+          line-height: 1.2em;
+          text-align: center;
+          vertical-align: baseline;
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+        }
+
+        @keyframes time-roll-out {
+          0% {
+            transform: translateY(0);
+            opacity: 1;
+            filter: blur(0px);
+          }
+          100% {
+            transform: translateY(-65%);
+            opacity: 0;
+            filter: blur(0.5px);
+          }
+        }
+
+        @keyframes time-roll-in {
+          0% {
+            transform: translateY(65%);
+            opacity: 0;
+            filter: blur(0.5px);
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+            filter: blur(0px);
+          }
+        }
+
+        .time-roll-out {
+          display: block;
+          animation: time-roll-out 500ms cubic-bezier(0.2, 0.9, 0.28, 1) forwards;
+          will-change: transform, opacity;
+        }
+
+        .time-roll-in {
+          display: block;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          animation: time-roll-in 500ms cubic-bezier(0.2, 0.9, 0.28, 1) forwards;
+          will-change: transform, opacity;
+        }
+
+        .playback-progress {
+          position: fixed;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          z-index: 5;
+          width: 2px;
+          background: rgba(248, 250, 252, 0.12);
+          pointer-events: none;
+        }
+
+        .playback-progress[hidden] {
+          display: none !important;
+        }
+
+        .playback-progress-fill {
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.6);
+          transform: scaleY(0);
+          transform-origin: top;
+        }
       </style>
 
       <svg width="0" height="0" style="position: absolute; width: 0; height: 0;" aria-hidden="true">
@@ -160,7 +320,21 @@
           "/>
         </filter>
       </svg>
+      <div class="ambient-backdrop" aria-hidden="true">
+        <div class="ambient-cover"></div>
+        <div class="ambient-cover"></div>
+      </div>
       <main class="stage" aria-label="Lyrics"></main>
+      <aside class="playback-time" aria-label="Playback Time" aria-live="off" hidden>
+        <span class="playback-time-part playback-time-elapsed">
+          <span class="time-col time-col-min time-elapsed-min">0</span>
+          <span class="time-col time-col-colon">:</span>
+          <span class="time-col time-col-sec">
+            <span class="time-digit-slot time-elapsed-sec-tens">0</span>
+            <span class="time-digit-slot time-elapsed-sec-ones">0</span>
+          </span>
+        </span>
+      </aside>
       <aside class="track-info" aria-label="Playback Info" aria-live="polite" hidden>
         <img class="track-info-source-icon" alt="" aria-hidden="true" hidden>
         <div class="track-info-wrapper">
@@ -171,14 +345,27 @@
           </div>
         </div>
       </aside>
+      <div class="playback-progress" aria-hidden="true">
+        <div class="playback-progress-fill"></div>
+      </div>
     </div>
 
     <script>
       (function() {
-        const { clearTimer } = parent.castBoardUtils;
+        const { clampUnit, formatSeconds } = parent.castBoardUtils;
         const { pages } = parent;
 
         let stage = null;
+        let ambientLayers = [];
+        let ambientActiveIndex = 0;
+        let ambientCoverUrl = "";
+        let playbackTime = null;
+        let elapsedMinEl = null;
+        let elapsedSecTensEl = null;
+        let elapsedSecOnesEl = null;
+        let playbackProgress = null;
+        let progressFill = null;
+        let lastElapsedSecond = -1;
         let trackInfo = null;
         let trackInfoSourceIcon = null;
         let trackInfoTitle = null;
@@ -505,10 +692,126 @@
           marqueeTimeoutId = setTimeout(updateMarquee, 50);
         }
 
+        function setAmbientCover(url) {
+          if (url === ambientCoverUrl) return;
+          ambientCoverUrl = url;
+
+          if (url === "") {
+            for (const layer of ambientLayers) {
+              layer.classList.remove("is-active");
+            }
+            return;
+          }
+
+          const preloader = new Image();
+          preloader.onload = () => {
+            if (ambientCoverUrl !== url) return;
+            const nextIndex = 1 - ambientActiveIndex;
+            const nextLayer = ambientLayers[nextIndex];
+            const currentLayer = ambientLayers[ambientActiveIndex];
+            if (!nextLayer) return;
+            nextLayer.style.backgroundImage = `url("${url}")`;
+            nextLayer.classList.add("is-active");
+            if (currentLayer) currentLayer.classList.remove("is-active");
+            ambientActiveIndex = nextIndex;
+          };
+          preloader.onerror = () => {
+            if (ambientCoverUrl !== url) return;
+            for (const layer of ambientLayers) {
+              layer.classList.remove("is-active");
+            }
+          };
+          preloader.src = url;
+        }
+
+        function splitTime(totalSeconds) {
+          const safe = Math.max(0, Number.isFinite(totalSeconds) ? totalSeconds : 0);
+          const total = Math.floor(safe);
+          const minutes = Math.floor(total / 60);
+          const seconds = total % 60;
+          return {
+            min: String(minutes),
+            secTens: String(Math.floor(seconds / 10)),
+            secOnes: String(seconds % 10),
+          };
+        }
+
+        function updateSlot(slot, nextVal, shouldAnimate) {
+          if (!slot) return;
+          const currentVal = slot.dataset.val ?? slot.textContent;
+          if (currentVal === nextVal && slot.children.length === 0) return;
+
+          slot.dataset.val = nextVal;
+
+          if (!shouldAnimate || currentVal === nextVal) {
+            slot.textContent = nextVal;
+            return;
+          }
+
+          const oldSpan = document.createElement("span");
+          oldSpan.className = "time-roll-out";
+          oldSpan.textContent = currentVal;
+
+          const newSpan = document.createElement("span");
+          newSpan.className = "time-roll-in";
+          newSpan.textContent = nextVal;
+
+          slot.replaceChildren(oldSpan, newSpan);
+
+          setTimeout(() => {
+            if (slot.dataset.val === nextVal) {
+              slot.textContent = nextVal;
+            }
+          }, 520);
+        }
+
+        function renderProgress() {
+          if (!progressFill) return;
+          const elapsed = Math.max(0, Number(parent.progressPosition) || 0);
+          const durationSeconds = Number.isFinite(parent.duration) && parent.duration > 0 ? parent.duration : 0;
+          const progress = durationSeconds > 0 ? clampUnit(elapsed / durationSeconds) : 0;
+
+          const elapsedSec = Math.floor(elapsed);
+          if (elapsedSec !== lastElapsedSecond) {
+            const isNormalStep = lastElapsedSecond !== -1 && Math.abs(elapsedSec - lastElapsedSecond) === 1;
+            progressFill.style.transition = isNormalStep ? "transform 1s linear" : "none";
+            lastElapsedSecond = elapsedSec;
+            progressFill.style.transform = `scaleY(${progress})`;
+
+            const elTime = splitTime(elapsed);
+            updateSlot(elapsedMinEl, elTime.min, isNormalStep);
+            updateSlot(elapsedSecTensEl, elTime.secTens, isNormalStep);
+            updateSlot(elapsedSecOnesEl, elTime.secOnes, isNormalStep);
+          }
+        }
+
+        function renderPlaybackMeta() {
+          const hasTrack = parent.TRACK_INFO.title !== "" || parent.TRACK_INFO.author !== "" || Number(parent.duration) > 0;
+          if (playbackTime) {
+            playbackTime.hidden = !hasTrack;
+          }
+          if (playbackProgress) {
+            playbackProgress.hidden = !hasTrack;
+          }
+
+          setAmbientCover(parent.TRACK_INFO.cover || "");
+          renderProgress();
+        }
+
         pages.lyrics = {
           template: document.body.innerHTML,
           mount(container) {
             stage = container.querySelector(".stage");
+            ambientLayers = Array.from(container.querySelectorAll(".ambient-cover"));
+            ambientActiveIndex = 0;
+            ambientCoverUrl = "";
+            playbackTime = container.querySelector(".playback-time");
+            elapsedMinEl = container.querySelector(".time-elapsed-min");
+            elapsedSecTensEl = container.querySelector(".time-elapsed-sec-tens");
+            elapsedSecOnesEl = container.querySelector(".time-elapsed-sec-ones");
+            playbackProgress = container.querySelector(".playback-progress");
+            progressFill = container.querySelector(".playback-progress-fill");
+            lastElapsedSecond = -1;
             trackInfo = container.querySelector(".track-info");
             trackInfoSourceIcon = container.querySelector(".track-info-source-icon");
             trackInfoTitle = container.querySelector(".track-info-title");
@@ -523,6 +826,7 @@
 
             resetLyricsDom();
             renderTrackSummary();
+            renderPlaybackMeta();
             layoutLyrics();
           },
           unmount() {
@@ -540,6 +844,16 @@
             }
             resetLyricsDom();
             stage = null;
+            ambientLayers = [];
+            ambientActiveIndex = 0;
+            ambientCoverUrl = "";
+            playbackTime = null;
+            elapsedMinEl = null;
+            elapsedSecTensEl = null;
+            elapsedSecOnesEl = null;
+            playbackProgress = null;
+            progressFill = null;
+            lastElapsedSecond = -1;
             trackInfo = null;
             trackInfoSourceIcon = null;
             trackInfoTitle = null;
@@ -549,9 +863,12 @@
             trackInfoSeparator = null;
           },
           onTrackChange() {
+            lastElapsedSecond = -1;
             renderTrackSummary();
+            renderPlaybackMeta();
           },
           onProgressChange() {
+            renderProgress();
             const nextIndex = parent.activeIndex;
             if (nextIndex !== currentIndex) {
               currentIndex = nextIndex;

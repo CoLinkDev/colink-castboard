@@ -5,7 +5,6 @@
   --ease-dim: cubic-bezier(0.4, 0, 1, 1);
   --page-transition-duration: 500ms;
   --page-dim-duration: 100ms;
-  --detail-art-size: 0px;
   --line-gap: clamp(22px, 4.2vh, 54px);
   --active-y: 20vh;
   --lyric-left: 0.85em;
@@ -284,6 +283,10 @@ body {
     height 0.45s var(--ease-page),
     opacity 0.3s var(--ease-page) 0.08s,
     margin-bottom 0.45s var(--ease-page);
+}
+
+.page-indicator.expanded .media-controls-row:last-child {
+  margin-bottom: 0;
 }
 
 .media-control-btn {
