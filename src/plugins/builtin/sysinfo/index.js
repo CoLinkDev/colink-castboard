@@ -237,8 +237,28 @@ function normalizeStats(payload) {
   };
 }
 export const manifest = Object.freeze({
+  schemaVersion: "1.0.0",
   id: "sysinfo",
-  name: { en: "sysinfo" },
+  name: {
+    en: "System Information",
+    "zh-CN": "系统信息",
+    ja: "システム情報",
+    ko: "시스템 정보",
+    "zh-TW": "系統資訊",
+    de: "Systeminformationen",
+    es: "Información del sistema",
+    ru: "Сведения о системе",
+  },
+  description: {
+    en: "Displays live processor, memory, graphics, network, and disk activity.",
+    "zh-CN": "实时显示处理器、内存、图形、网络和磁盘活动。",
+    ja: "プロセッサ、メモリ、グラフィックス、ネットワーク、ディスクの動作状況をリアルタイムで表示します。",
+    ko: "프로세서, 메모리, 그래픽, 네트워크 및 디스크 활동을 실시간으로 표시합니다.",
+    "zh-TW": "即時顯示處理器、記憶體、圖形、網路和磁碟活動。",
+    de: "Zeigt Prozessor-, Arbeitsspeicher-, Grafik-, Netzwerk- und Datenträgeraktivität in Echtzeit an.",
+    es: "Muestra en tiempo real la actividad del procesador, la memoria, los gráficos, la red y el disco.",
+    ru: "В реальном времени показывает активность процессора, памяти, графики, сети и дисков.",
+  },
   version: "1.0.0",
   minCastBoardVersion: "1.0.0",
   type: "navigable",

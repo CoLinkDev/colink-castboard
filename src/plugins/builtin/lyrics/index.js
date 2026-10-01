@@ -4,8 +4,11 @@ async function loadTemplate() {
   return response.text();
 }
 const { clampUnit, formatSeconds } = window.castBoardUtils;
+const TEMPORARY_FOCUS_DURATION_MS = 5000;
 
         let stage = null;
+        let active = false;
+        let removeTrackChangeListener = null;
         let ambientLayers = [];
         let ambientActiveIndex = 0;
         let ambientCoverUrl = "";
@@ -453,7 +456,7 @@ const { clampUnit, formatSeconds } = window.castBoardUtils;
         }
 
         const plugin = {
-          async mount(shadowRoot) {
+          async mount(shadowRoot, context) {
             const template = await loadTemplate();
             shadowRoot.innerHTML = template;
             const container = shadowRoot;
@@ -484,16 +487,32 @@ const { clampUnit, formatSeconds } = window.castBoardUtils;
             renderTrackSummary();
             renderPlaybackMeta();
             layoutLyrics();
+
+            const handleTrackChange = () => {
+              if (active) {
+                plugin.onTrackChange();
+                context.navigation.extendTemporaryFocus?.(TEMPORARY_FOCUS_DURATION_MS);
+              } else {
+                void context.navigation.requestTemporaryFocus(TEMPORARY_FOCUS_DURATION_MS);
+              }
+            };
+            window.addEventListener("lyrics-track-change", handleTrackChange);
+            removeTrackChangeListener = () => window.removeEventListener("lyrics-track-change", handleTrackChange);
           },
           activate() {
+            active = true;
             renderTrackSummary();
             renderPlaybackMeta();
             layoutLyrics();
           },
           deactivate() {
+            active = false;
             stopMarquee();
           },
           unmount() {
+            active = false;
+            removeTrackChangeListener?.();
+            removeTrackChangeListener = null;
             stopMarquee();
             resetLyricsDom();
             stage = null;
@@ -541,8 +560,28 @@ const { clampUnit, formatSeconds } = window.castBoardUtils;
           }
         };
 export const manifest = Object.freeze({
+  schemaVersion: "1.0.0",
   id: "lyrics",
-  name: { en: "lyrics" },
+  name: {
+    en: "Lyrics",
+    "zh-CN": "歌词",
+    ja: "歌詞",
+    ko: "가사",
+    "zh-TW": "歌詞",
+    de: "Liedtexte",
+    es: "Letras",
+    ru: "Текст песни",
+  },
+  description: {
+    en: "Displays synchronized lyrics and current track information.",
+    "zh-CN": "显示同步歌词和当前曲目信息。",
+    ja: "同期された歌詞と現在のトラック情報を表示します。",
+    ko: "동기화된 가사와 현재 트랙 정보를 표시합니다.",
+    "zh-TW": "顯示同步歌詞和目前曲目資訊。",
+    de: "Zeigt synchronisierte Liedtexte und Informationen zum aktuellen Titel an.",
+    es: "Muestra letras sincronizadas e información de la pista actual.",
+    ru: "Показывает синхронизированный текст и сведения о текущем треке.",
+  },
   version: "1.0.0",
   minCastBoardVersion: "1.0.0",
   type: "navigable",

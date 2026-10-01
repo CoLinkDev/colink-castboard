@@ -30,6 +30,10 @@ class NavigationManager {
     this.isTransientActive = false;
     this.transientTimer = 0;
     this.transientRequestId = 0;
+    this.temporaryReturnPage = null;
+    this.temporaryFocusTarget = null;
+    this.temporaryFocusTimer = 0;
+    this.temporaryFocusRequestId = 0;
   }
   getNavigablePages() { return this.manager.getNavigablePages().map(({ manifest }) => manifest.id); }
   getStoredPage() {
@@ -63,16 +67,28 @@ class NavigationManager {
     for (const record of this.manager.getTransientPages()) await this.ensureMounted(record);
   }
   navigateTo(id, temporary = false, direction = 0) {
-    if (this.isTransientActive && !temporary) this.cancelTransient();
+    if (!temporary) {
+      this.cancelTransient();
+      this.cancelTemporaryFocus();
+    }
+    return this.queueNavigation(id, temporary, direction);
+  }
+  queueNavigation(id, temporary, direction, canNavigate = null) {
     this.navigationTarget = id;
-    const navigation = this.navigationQueue.then(() => this.performNavigation(id, temporary, direction));
+    const navigation = this.navigationQueue.then(() => {
+      if (canNavigate && !canNavigate()) return;
+      return this.performNavigation(id, temporary, direction);
+    });
     this.navigationQueue = navigation.catch((error) => {
       log("navigation", "navigation-failed", { id, error: String(error) });
     });
     return this.navigationQueue;
   }
   async performNavigation(id, temporary, direction) {
-    if (id === this.currentPageName) return;
+    if (id === this.currentPageName) {
+      if (!temporary) this.commitCurrentPage(id, false);
+      return;
+    }
     const next = this.manager.get(id);
     if (!next || next.failed) return;
     const previousId = this.currentPageName;
@@ -167,40 +183,131 @@ class NavigationManager {
     const current = this.isTransientActive
       ? this.transientOriginalPage
       : (this.navigationTarget || this.currentPageName);
-    if (this.isTransientActive) this.cancelTransient();
     const index = Math.max(0, ids.indexOf(current));
     void this.navigateTo(ids[(index + direction + ids.length) % ids.length], false, direction);
   }
   nextPage() { this.move(1); }
   prevPage() { this.move(-1); }
   showTransient(id, durationMs) {
+    const duration = this.normalizeDuration(durationMs);
     if (!this.manager.getTransientPages().some(({ manifest }) => manifest.id === id) || !this.currentPageName) return;
     if (!this.isTransientActive) this.transientOriginalPage = this.currentPageName;
     this.isTransientActive = true;
     clearTimeout(this.transientTimer);
     const requestId = ++this.transientRequestId;
-    void this.navigateTo(id, true).then(() => {
+    void this.queueNavigation(
+      id,
+      true,
+      0,
+      () => requestId === this.transientRequestId && this.isTransientActive,
+    ).then(() => {
       if (requestId !== this.transientRequestId || !this.isTransientActive) return;
       if (this.currentPageName !== id) {
         this.cancelTransient();
         return;
       }
-      this.transientTimer = setTimeout(() => this.restoreTransient(), Math.max(0, durationMs));
+      this.transientTimer = setTimeout(() => this.restoreTransient(), duration);
     });
   }
   restoreTransient() {
     clearTimeout(this.transientTimer);
-    this.transientRequestId += 1;
+    this.transientTimer = 0;
+    const requestId = ++this.transientRequestId;
     const target = this.transientOriginalPage || "lyrics";
     this.isTransientActive = false;
     this.transientOriginalPage = null;
-    void this.navigateTo(target, true);
+    void this.queueNavigation(
+      target,
+      true,
+      0,
+      () => requestId === this.transientRequestId,
+    );
   }
   cancelTransient() {
     clearTimeout(this.transientTimer);
+    this.transientTimer = 0;
     this.transientRequestId += 1;
     this.isTransientActive = false;
     this.transientOriginalPage = null;
+  }
+  requestTemporaryFocus(id, durationMs) {
+    const duration = this.normalizeDuration(durationMs);
+    const navigablePages = this.getNavigablePages();
+    if (!navigablePages.includes(id) || !this.currentPageName) return Promise.resolve(false);
+    if (this.currentPageName === id || this.navigationTarget === id) return Promise.resolve(false);
+
+    const returnPage = this.temporaryReturnPage
+      || (this.isTransientActive ? this.transientOriginalPage : this.currentPageName);
+    if (!navigablePages.includes(returnPage)) return Promise.resolve(false);
+
+    if (this.isTransientActive) this.cancelTransient();
+    this.cancelTemporaryFocus();
+    this.temporaryReturnPage = returnPage;
+    this.temporaryFocusTarget = id;
+    const requestId = ++this.temporaryFocusRequestId;
+
+    return this.queueNavigation(
+      id,
+      true,
+      0,
+      () => requestId === this.temporaryFocusRequestId && this.temporaryFocusTarget === id,
+    ).then(() => {
+      if (requestId !== this.temporaryFocusRequestId || this.temporaryFocusTarget !== id) return false;
+      if (this.currentPageName !== id) {
+        this.cancelTemporaryFocus();
+        return false;
+      }
+      this.temporaryFocusTimer = setTimeout(() => {
+        if (requestId === this.temporaryFocusRequestId) this.restoreTemporaryFocus();
+      }, duration);
+      return true;
+    });
+  }
+  extendTemporaryFocus(id, durationMs) {
+    const duration = this.normalizeDuration(durationMs);
+    if (
+      !this.temporaryReturnPage
+      || this.temporaryFocusTarget !== id
+      || this.currentPageName !== id
+    ) {
+      return false;
+    }
+    clearTimeout(this.temporaryFocusTimer);
+    const requestId = this.temporaryFocusRequestId;
+    this.temporaryFocusTimer = setTimeout(() => {
+      if (requestId === this.temporaryFocusRequestId) this.restoreTemporaryFocus();
+    }, duration);
+    return true;
+  }
+  restoreTemporaryFocus() {
+    const target = this.temporaryReturnPage;
+    if (!target) return;
+    this.cancelTemporaryFocus();
+    if (this.isTransientActive) {
+      this.transientOriginalPage = target;
+      return;
+    }
+    const requestId = this.temporaryFocusRequestId;
+    void this.queueNavigation(
+      target,
+      true,
+      0,
+      () => requestId === this.temporaryFocusRequestId,
+    );
+  }
+  cancelTemporaryFocus() {
+    clearTimeout(this.temporaryFocusTimer);
+    this.temporaryFocusTimer = 0;
+    this.temporaryFocusRequestId += 1;
+    this.temporaryReturnPage = null;
+    this.temporaryFocusTarget = null;
+  }
+  normalizeDuration(durationMs) {
+    const duration = Number(durationMs);
+    if (!Number.isFinite(duration) || duration < 0) {
+      throw new TypeError("Navigation duration must be a non-negative finite number");
+    }
+    return duration;
   }
 }
 window.navManager = new NavigationManager(plugins);
@@ -304,7 +411,6 @@ function bindEvents() {
       void window.navManager.navigateTo("lyrics");
     }
   });
-  addEventListener("lyrics-track-change", () => invokeActivePlugin("lyrics", "onTrackChange"));
   addEventListener("lyrics-progress-change", () => invokeActivePlugin("lyrics", "onProgressChange"));
   addEventListener("lyrics-lines-change", () => invokeActivePlugin("lyrics", "layoutLyrics"));
   addEventListener("playback-paused-change", () => updatePlayPause(window.progressPaused));
@@ -385,6 +491,7 @@ async function boot() {
   });
   await (document.fonts?.ready ?? Promise.resolve());
   await window.navManager.navigateTo(window.navManager.getStoredPage());
+  await window.navManager.ensureMounted(plugins.get("lyrics"));
   await window.navManager.prepareTransients();
   host.notifyPageReady().then(() => host.startMusicAlive()).catch((error) => log("app", "page-ready-request-failed", { error: String(error) }));
   loader.loadDevelopmentPlugins().then((results) => results.filter(({ status }) => status === "rejected").forEach(({ reason }) => log("plugin", "development-load-failed", { error: String(reason) }))).catch((error) => log("plugin", "development-index-failed", { error: String(error) }));

@@ -1,6 +1,15 @@
-const REQUIRED_MANIFEST_FIELDS = ["id", "name", "version", "type", "entry"];
+const REQUIRED_MANIFEST_FIELDS = [
+  "schemaVersion",
+  "id",
+  "name",
+  "version",
+  "minCastBoardVersion",
+  "type",
+  "entry",
+];
 const LIFECYCLE_HOOKS = ["mount", "activate", "deactivate", "unmount", "onResize"];
 const PLUGIN_TYPES = new Set(["navigable", "transient"]);
+const SEMANTIC_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 
 export class PluginManager extends EventTarget {
   constructor({ host, language }) {
@@ -19,14 +28,14 @@ export class PluginManager extends EventTarget {
   }
 
   register(manifest, plugin, baseUrl, source) {
-    validateManifest(manifest);
+    const normalizedManifest = normalizeManifest(manifest);
     validatePlugin(plugin);
-    if (this.plugins.has(manifest.id)) {
-      throw new Error(`Plugin id is already registered: ${manifest.id}`);
+    if (this.plugins.has(normalizedManifest.id)) {
+      throw new Error(`Plugin id is already registered: ${normalizedManifest.id}`);
     }
 
     const record = {
-      manifest: Object.freeze({ ...manifest }),
+      manifest: normalizedManifest,
       plugin,
       baseUrl: new URL("./", baseUrl).href,
       source,
@@ -54,7 +63,19 @@ export class PluginManager extends EventTarget {
           if (record.manifest.type !== "transient") {
             throw new Error(`Plugin ${record.manifest.id} is not transient`);
           }
-          window.navManager?.showTransient(record.manifest.id, durationMs);
+          return window.navManager?.showTransient(record.manifest.id, durationMs);
+        },
+        requestTemporaryFocus: (durationMs) => {
+          if (record.manifest.type !== "navigable") {
+            throw new Error(`Plugin ${record.manifest.id} is not navigable`);
+          }
+          return window.navManager?.requestTemporaryFocus(record.manifest.id, durationMs);
+        },
+        extendTemporaryFocus: (durationMs) => {
+          if (record.manifest.type !== "navigable") {
+            throw new Error(`Plugin ${record.manifest.id} is not navigable`);
+          }
+          return window.navManager?.extendTemporaryFocus(record.manifest.id, durationMs) ?? false;
         },
       }),
       i18n: Object.freeze({ language: this.language }),
@@ -150,16 +171,50 @@ export class PluginManager extends EventTarget {
   }
 }
 
-function validateManifest(manifest) {
-  if (!manifest || typeof manifest !== "object") throw new TypeError("Plugin manifest is required");
+function normalizeManifest(manifest) {
+  if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+    throw new TypeError("Plugin manifest must be an object");
+  }
   for (const field of REQUIRED_MANIFEST_FIELDS) {
-    if (!manifest[field]) throw new TypeError(`Plugin manifest field is required: ${field}`);
+    if (!Object.prototype.hasOwnProperty.call(manifest, field)) {
+      throw new TypeError(`Plugin manifest field is required: ${field}`);
+    }
+  }
+  if (typeof manifest.id !== "string" || manifest.id.trim() === "") {
+    throw new TypeError("Plugin manifest id must be a non-empty string");
+  }
+  if (typeof manifest.entry !== "string" || manifest.entry.trim() === "") {
+    throw new TypeError("Plugin manifest entry must be a non-empty string");
   }
   if (!PLUGIN_TYPES.has(manifest.type)) throw new TypeError(`Unsupported plugin type: ${manifest.type}`);
-  for (const field of ["version", "minCastBoardVersion"]) {
-    if (!/^\d+\.\d+\.\d+$/.test(manifest[field])) {
+  for (const field of ["schemaVersion", "version", "minCastBoardVersion"]) {
+    if (typeof manifest[field] !== "string" || !SEMANTIC_VERSION_PATTERN.test(manifest[field])) {
       throw new TypeError(`Plugin manifest field must be a semantic version: ${field}`);
     }
+  }
+  validateLocalizedText(manifest.name, "name");
+  if (manifest.description !== undefined) {
+    validateLocalizedText(manifest.description, "description");
+  }
+
+  return Object.freeze({
+    ...manifest,
+    name: Object.freeze({ ...manifest.name }),
+    ...(manifest.description === undefined
+      ? {}
+      : { description: Object.freeze({ ...manifest.description }) }),
+  });
+}
+
+function validateLocalizedText(value, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(`Plugin manifest ${field} must be a localized string object`);
+  }
+  const entries = Object.entries(value);
+  if (entries.length === 0 || entries.some(([locale, text]) => (
+    locale.trim() === "" || typeof text !== "string" || text.trim() === ""
+  ))) {
+    throw new TypeError(`Plugin manifest ${field} must contain non-empty locale and string entries`);
   }
 }
 

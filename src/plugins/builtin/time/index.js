@@ -70,8 +70,28 @@ let mountedContainer = null;
           }
         };
 export const manifest = Object.freeze({
+  schemaVersion: "1.0.0",
   id: "time",
-  name: { en: "time" },
+  name: {
+    en: "Time",
+    "zh-CN": "时间",
+    ja: "時刻",
+    ko: "시간",
+    "zh-TW": "時間",
+    de: "Uhrzeit",
+    es: "Hora",
+    ru: "Время",
+  },
+  description: {
+    en: "Displays the current time and date every half hour.",
+    "zh-CN": "每半小时显示当前时间和日期。",
+    ja: "30分ごとに現在の時刻と日付を表示します。",
+    ko: "30분마다 현재 시간과 날짜를 표시합니다.",
+    "zh-TW": "每半小時顯示目前時間和日期。",
+    de: "Zeigt alle 30 Minuten die aktuelle Uhrzeit und das Datum an.",
+    es: "Muestra la hora y la fecha actuales cada media hora.",
+    ru: "Показывает текущие время и дату каждые полчаса.",
+  },
   version: "1.0.0",
   minCastBoardVersion: "1.0.0",
   type: "transient",
