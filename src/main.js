@@ -1,823 +1,392 @@
-// ==== Global Config & Public State ====
-window.pages = {};
+import { PluginLoader } from "./plugins/loader.js";
+import { PluginManager } from "./plugins/manager.js";
+import lyrics, { manifest as lyricsManifest } from "./plugins/builtin/lyrics/index.js";
+import sysinfo, { manifest as sysinfoManifest } from "./plugins/builtin/sysinfo/index.js";
+import time, { manifest as timeManifest } from "./plugins/builtin/time/index.js";
+
+const { clearTimer, log, parseCssLength } = window.castBoardUtils;
+const host = window.castBoardHost;
+const plugins = new PluginManager({ host, language: host.config.language || document.documentElement.lang || "en" });
+const loader = new PluginLoader(plugins);
+window.pluginManager = plugins;
 window.currentPageName = null;
 window.cachedGap = 36;
-window.cachedActiveY = window.innerHeight * 0.35;
-window.resizeTimer = 0;
-window.navManager = null;
-window.latestSysInfoStats = null;
-let bootLocked = true;
-let contextMenu = null;
+window.cachedActiveY = innerHeight * 0.35;
+
 function cacheLayoutMetrics() {
-  const root = getComputedStyle(document.documentElement);
-  cachedGap = parseCssLength(root.getPropertyValue("--line-gap"), 36);
-  cachedActiveY = parseCssLength(root.getPropertyValue("--active-y"), window.innerHeight * 0.35);
+  const style = getComputedStyle(document.documentElement);
+  window.cachedGap = parseCssLength(style.getPropertyValue("--line-gap"), 36);
+  window.cachedActiveY = parseCssLength(style.getPropertyValue("--active-y"), innerHeight * 0.35);
 }
+window.cacheLayoutMetrics = cacheLayoutMetrics;
 
-function hideContextMenu() {
-  if (!contextMenu || contextMenu.hidden) return false;
-  contextMenu.hidden = true;
-  return true;
-}
-
-function createContextMenu() {
-  const labels = window.castBoardI18n.messages("contextMenu");
-  contextMenu = document.createElement("div");
-  contextMenu.className = "castboard-context-menu";
-  contextMenu.hidden = true;
-  contextMenu.setAttribute("role", "menu");
-  contextMenu.innerHTML = `<button class="castboard-context-menu-item" type="button" data-action="close" role="menuitem">${labels.close}</button>${window.castBoardHost.config.debug ? `<button class="castboard-context-menu-item" type="button" data-action="open-devtools" role="menuitem">${labels.openDevTools}</button>` : ""}`;
-  contextMenu.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const action = event.target.closest("[data-action]")?.dataset.action;
-    if (!action) return;
-    hideContextMenu();
-    if (action === "close") {
-      window.castBoardHost.close().catch((error) => {
-        log("app", "close-request-failed", { error: String(error) });
-      });
-    } else if (action === "open-devtools") {
-      window.castBoardHost.openDevTools().catch((error) => {
-        log("app", "open-devtools-request-failed", { error: String(error) });
-      });
-    }
-  });
-  document.body.appendChild(contextMenu);
-}
-
-const ICON_PREVIOUS = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>';
-const ICON_PLAY = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-const ICON_NEXT = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>';
-
-let pageIndicatorEl = null;
-let pageIndicatorTimer = 0;
-let optimisticDebounceTimer = 0;
-
-function updatePlayPauseButtonState(isPaused) {
-  if (!pageIndicatorEl) return;
-  const playPauseBtn = pageIndicatorEl.querySelector('.media-control-btn[data-action="playPause"]');
-  if (!playPauseBtn) return;
-  const paused = Boolean(isPaused);
-  playPauseBtn.dataset.paused = paused ? "true" : "false";
-  playPauseBtn.innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
-}
-
-function createPageIndicator() {
-  if (!pageIndicatorEl) {
-    pageIndicatorEl = document.createElement("div");
-    pageIndicatorEl.id = "page-indicator";
-    pageIndicatorEl.className = "page-indicator";
-    pageIndicatorEl.setAttribute("aria-label", "Page Indicator");
-    document.body.appendChild(pageIndicatorEl);
-  }
-
-  pageIndicatorEl.innerHTML = "";
-
-  const controlsRow = document.createElement("div");
-  controlsRow.className = "media-controls-row";
-
-  const labels = window.castBoardI18n.messages("controls") || {
-    previous: "Previous",
-    playPause: "Play / Pause",
-    next: "Next",
-  };
-
-  const prevBtn = document.createElement("button");
-  prevBtn.className = "media-control-btn";
-  prevBtn.type = "button";
-  prevBtn.dataset.action = "previous";
-  prevBtn.setAttribute("aria-label", labels.previous);
-  prevBtn.innerHTML = ICON_PREVIOUS;
-  prevBtn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    event.currentTarget?.blur?.();
-    window.castBoardHost.sendMediaControl("previous").catch((error) => {
-      log("app", "send-media-control-failed", { action: "previous", error: String(error) });
-    });
-    showIndicatorTemporarily();
-  });
-
-  const playPauseBtn = document.createElement("button");
-  playPauseBtn.className = "media-control-btn";
-  playPauseBtn.type = "button";
-  playPauseBtn.dataset.action = "playPause";
-  playPauseBtn.setAttribute("aria-label", labels.playPause);
-  playPauseBtn.dataset.paused = window.progressPaused ? "true" : "false";
-  playPauseBtn.innerHTML = window.progressPaused ? ICON_PLAY : ICON_PAUSE;
-  playPauseBtn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    event.currentTarget?.blur?.();
-    const currentIsPaused = playPauseBtn.dataset.paused === "true";
-    const nextIsPaused = !currentIsPaused;
-    updatePlayPauseButtonState(nextIsPaused);
-
-    const action = nextIsPaused ? "pause" : "play";
-    window.castBoardHost.sendMediaControl(action).catch((error) => {
-      log("app", "send-media-control-failed", { action, error: String(error) });
-    });
-
-    if (optimisticDebounceTimer) {
-      clearTimeout(optimisticDebounceTimer);
-    }
-    optimisticDebounceTimer = setTimeout(() => {
-      optimisticDebounceTimer = 0;
-      updatePlayPauseButtonState(window.progressPaused);
-    }, 2000);
-
-    showIndicatorTemporarily();
-  });
-
-  const nextBtn = document.createElement("button");
-  nextBtn.className = "media-control-btn";
-  nextBtn.type = "button";
-  nextBtn.dataset.action = "next";
-  nextBtn.setAttribute("aria-label", labels.next);
-  nextBtn.innerHTML = ICON_NEXT;
-  nextBtn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    event.currentTarget?.blur?.();
-    window.castBoardHost.sendMediaControl("next").catch((error) => {
-      log("app", "send-media-control-failed", { action: "next", error: String(error) });
-    });
-    showIndicatorTemporarily();
-  });
-
-  controlsRow.appendChild(prevBtn);
-  controlsRow.appendChild(playPauseBtn);
-  controlsRow.appendChild(nextBtn);
-  pageIndicatorEl.appendChild(controlsRow);
-
-  const allPageItems = [
-    { name: "lyrics", label: "Lyrics" },
-    { name: "sysinfo", label: "System Info" },
-  ];
-
-  const navigable = window.navManager
-    ? window.navManager.getNavigablePages()
-    : (window.castBoardHost?.featureGates?.sysinfoBasic ? ["lyrics", "sysinfo"] : ["lyrics"]);
-
-  const pageItems = allPageItems.filter((item) => navigable.includes(item.name));
-
-  if (pageItems.length > 1) {
-    const dotsRow = document.createElement("div");
-    dotsRow.className = "page-indicator-dots";
-
-    for (const item of pageItems) {
-      const dot = document.createElement("button");
-      dot.className = "page-indicator-dot";
-      dot.dataset.page = item.name;
-      dot.type = "button";
-      dot.setAttribute("aria-label", item.label);
-      dot.addEventListener("click", (event) => {
-        event.stopPropagation();
-        event.currentTarget?.blur?.();
-        if (window.navManager) {
-          window.navManager.navigateTo(item.name);
-          showIndicatorTemporarily();
-        }
-      });
-      dotsRow.appendChild(dot);
-    }
-    pageIndicatorEl.appendChild(dotsRow);
-  }
-
-  updatePageIndicatorState(window.currentPageName || "lyrics");
-}
-
-function updatePageIndicatorState(activePageName) {
-  if (!pageIndicatorEl) return;
-
-  if (activePageName === "time") {
-    hideIndicator();
-    pageIndicatorEl.classList.remove("expanded");
-    return;
-  }
-
-  const dots = pageIndicatorEl.querySelectorAll(".page-indicator-dot");
-  for (const dot of dots) {
-    dot.classList.toggle("active", dot.dataset.page === activePageName);
-  }
-
-  const shouldExpand = activePageName === "lyrics" && Boolean(window.castBoardHost?.featureGates?.mediaControl);
-  pageIndicatorEl.classList.toggle("expanded", shouldExpand);
-
-  if (dots.length <= 1 && !shouldExpand) {
-    pageIndicatorEl.style.display = "none";
-    return;
-  }
-  pageIndicatorEl.style.display = "flex";
-}
-
-function isIndicatorVisible() {
-  return Boolean(pageIndicatorEl?.classList.contains("visible"));
-}
-
-function hideIndicator() {
-  if (!pageIndicatorEl) return false;
-  if (pageIndicatorTimer) {
-    clearTimeout(pageIndicatorTimer);
-    pageIndicatorTimer = 0;
-  }
-  if (pageIndicatorEl.classList.contains("visible")) {
-    pageIndicatorEl.classList.remove("visible");
-    return true;
-  }
-  return false;
-}
-
-function showIndicatorTemporarily(durationMs = 2800) {
-  if (!pageIndicatorEl) return;
-  if (window.currentPageName === "time") return;
-
-  pageIndicatorEl.classList.add("visible");
-  if (pageIndicatorTimer) {
-    clearTimeout(pageIndicatorTimer);
-    pageIndicatorTimer = 0;
-  }
-
-  pageIndicatorTimer = setTimeout(() => {
-    pageIndicatorTimer = 0;
-    if (pageIndicatorEl) {
-      pageIndicatorEl.classList.remove("visible");
-    }
-  }, durationMs);
-}
-
-// ==== Routing and Navigation Management ====
 class NavigationManager {
-  constructor(pages) {
-    this.pages = pages;
+  constructor(manager) {
+    this.manager = manager;
     this.currentPageName = null;
-    this.pageCleanupTimer = 0;
-    this.storageKey = "lyrics2screen.currentPage";
-
-    // Transient (temporary navigation) state
-    this.transientTimer = 0;
+    this.navigationTarget = null;
+    this.navigationQueue = Promise.resolve();
     this.transientOriginalPage = null;
     this.isTransientActive = false;
-    this.transientQueue = [];
+    this.transientTimer = 0;
+    this.transientRequestId = 0;
   }
-
+  getNavigablePages() { return this.manager.getNavigablePages().map(({ manifest }) => manifest.id); }
   getStoredPage() {
     try {
-      const page = window.localStorage.getItem(this.storageKey);
-      if (page && this.pages[page]) return page;
-      return "lyrics";
-    } catch (error) {
-      log("navigation", "stored-page-read-failed", { error: String(error) });
-      return "lyrics";
-    }
+      const id = localStorage.getItem("lyrics2screen.currentPage");
+      return this.getNavigablePages().includes(id) ? id : "lyrics";
+    } catch { return "lyrics"; }
   }
+  async ensureMounted(record) {
+    if (record.mounted) return true;
+    if (record.failed) return false;
+    if (record.mountPromise) return record.mountPromise;
 
-  storePage(pageName) {
+    record.mountPromise = (async () => {
+      const shell = document.createElement("div");
+      shell.className = `page page-type-${record.manifest.type}`;
+      shell.dataset.pluginId = record.manifest.id;
+      shell.dataset.pluginType = record.manifest.type;
+      shell.hidden = true;
+      document.getElementById("app-root").appendChild(shell);
+      return this.manager.mount(record, shell);
+    })();
+
     try {
-      window.localStorage.setItem(this.storageKey, pageName);
-    } catch (error) {
-      log("navigation", "stored-page-write-failed", { error: String(error) });
+      return await record.mountPromise;
+    } finally {
+      record.mountPromise = null;
     }
   }
-
-  navigateTo(newPageName, isTemporary = false, direction = 0) {
-    if (this.currentPageName === newPageName) return;
-
-    if (this.isTransientActive && !isTemporary) {
-      this.cancelTransient();
-    }
-
-    const root = document.getElementById("app-root");
-    const oldPageDoms = Array.from(root.querySelectorAll(".page"));
-    const oldPageName = this.currentPageName;
-
-    const config = this.pages[newPageName];
-    if (!config) return;
-
-    if (this.pageCleanupTimer) {
-      window.clearTimeout(this.pageCleanupTimer);
-      this.pageCleanupTimer = 0;
-      for (const oldPageDom of oldPageDoms) {
-        oldPageDom.remove();
-      }
-    }
-
-    // Determine transition animation classes
-    let enterClass = "page-enter-fade";
-    let leaveClass = "page-leave-fade";
-
-    if (direction > 0) {
-      enterClass = "page-enter-next";
-      leaveClass = "page-leave-next";
-    } else if (direction < 0) {
-      enterClass = "page-enter-prev";
-      leaveClass = "page-leave-prev";
-    } else if (oldPageName && newPageName && oldPageName !== "time" && newPageName !== "time") {
-      const navigable = this.getNavigablePages();
-      const fromIdx = navigable.indexOf(oldPageName);
-      const toIdx = navigable.indexOf(newPageName);
-      if (fromIdx !== -1 && toIdx !== -1) {
-        if (toIdx > fromIdx) {
-          enterClass = "page-enter-next";
-          leaveClass = "page-leave-next";
-        } else if (toIdx < fromIdx) {
-          enterClass = "page-enter-prev";
-          leaveClass = "page-leave-prev";
-        }
-      }
-    }
-
-    const div = document.createElement("div");
-    div.innerHTML = config.template;
-    const newPageDom = div.firstElementChild;
-
-    newPageDom.classList.add(enterClass);
-    root.appendChild(newPageDom);
-
-    this.currentPageName = newPageName;
-    window.currentPageName = newPageName;
-    log("navigation", "page-navigated", {
-      from: oldPageName,
-      to: newPageName,
-      temporary: isTemporary,
+  async prepareTransients() {
+    for (const record of this.manager.getTransientPages()) await this.ensureMounted(record);
+  }
+  navigateTo(id, temporary = false, direction = 0) {
+    if (this.isTransientActive && !temporary) this.cancelTransient();
+    this.navigationTarget = id;
+    const navigation = this.navigationQueue.then(() => this.performNavigation(id, temporary, direction));
+    this.navigationQueue = navigation.catch((error) => {
+      log("navigation", "navigation-failed", { id, error: String(error) });
     });
-    if (typeof updatePageIndicatorState === "function") {
-      updatePageIndicatorState(newPageName);
+    return this.navigationQueue;
+  }
+  async performNavigation(id, temporary, direction) {
+    if (id === this.currentPageName) return;
+    const next = this.manager.get(id);
+    if (!next || next.failed) return;
+    const previousId = this.currentPageName;
+    const previous = previousId ? this.manager.get(previousId) : null;
+    if (!(await this.ensureMounted(next))) {
+      if (id === "lyrics" && next.shell) {
+        this.showFailedPage(next);
+      } else if (id !== "lyrics") {
+        void this.navigateTo("lyrics", temporary);
+      }
+      return;
     }
-    config.mount(newPageDom);
-
-    if (!isTemporary) {
-      this.storePage(newPageName);
+    this.clearPendingHide(next);
+    if (previous) {
+      this.clearPendingHide(previous);
+      await this.manager.deactivate(previous);
     }
-
+    const [enter, leave] = this.classes(previousId, id, direction);
+    next.shell.hidden = false;
+    next.shell.classList.remove("page-active", "page-leave-next", "page-leave-prev", "page-leave-fade", "page-enter-next", "page-enter-prev", "page-enter-fade");
+    next.shell.classList.add(enter);
+    void next.shell.offsetWidth;
+    this.commitCurrentPage(id, temporary);
+    if (!(await this.manager.activate(next))) {
+      this.showFailedPage(next);
+      if (previous?.shell) previous.shell.hidden = true;
+      if (id !== "lyrics") void this.navigateTo("lyrics", true);
+      return;
+    }
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        for (const oldPageDom of oldPageDoms) {
-          oldPageDom.classList.remove("page-active");
-          oldPageDom.classList.add(leaveClass);
-        }
-        newPageDom.classList.remove(enterClass);
-        newPageDom.classList.add("page-active");
-      });
+      if (this.currentPageName !== id) return;
+      previous?.shell?.classList.remove("page-active", "page-enter-next", "page-enter-prev", "page-enter-fade");
+      previous?.shell?.classList.add(leave);
+      next.shell.classList.remove(enter);
+      next.shell.classList.add("page-active");
     });
-
-    if (oldPageDoms.length > 0) {
-      let cleaned = false;
-      const cleanupOldPages = () => {
-        if (cleaned) return;
-        cleaned = true;
-        if (this.pageCleanupTimer) {
-          window.clearTimeout(this.pageCleanupTimer);
-          this.pageCleanupTimer = 0;
-        }
-        if (oldPageName && this.pages[oldPageName] && typeof this.pages[oldPageName].unmount === "function") {
-          this.pages[oldPageName].unmount();
-        }
-        for (const oldPageDom of oldPageDoms) {
-          oldPageDom.remove();
-        }
-      };
-
-      const primaryOldDom = oldPageDoms[0];
-      if (primaryOldDom) {
-        primaryOldDom.addEventListener("transitionend", cleanupOldPages, { once: true });
+    if (previous?.shell) this.scheduleHide(previous, leave, previousId);
+    log("navigation", "page-navigated", { from: previousId, to: id, temporary });
+  }
+  commitCurrentPage(id, temporary) {
+    this.currentPageName = id;
+    window.currentPageName = id;
+    if (!temporary) try { localStorage.setItem("lyrics2screen.currentPage", id); } catch {}
+    updateIndicator(id);
+  }
+  showFailedPage(record) {
+    this.clearPendingHide(record);
+    record.shell.hidden = false;
+    record.shell.classList.remove("page-enter-next", "page-enter-prev", "page-enter-fade");
+    record.shell.classList.add("page-active");
+    this.commitCurrentPage(record.manifest.id, true);
+  }
+  clearPendingHide(record) {
+    record.cancelPendingHide?.();
+    record.cancelPendingHide = null;
+    record.shell?.classList.remove(
+      "page-enter-next", "page-enter-prev", "page-enter-fade",
+      "page-leave-next", "page-leave-prev", "page-leave-fade",
+    );
+  }
+  scheduleHide(record, leaveClass, id) {
+    const shell = record.shell;
+    let timeoutId = 0;
+    const finish = (event) => {
+      if (event && (event.target !== shell || event.propertyName !== "transform")) return;
+      shell.removeEventListener("transitionend", finish);
+      clearTimeout(timeoutId);
+      shell.classList.remove(leaveClass);
+      if (this.currentPageName !== id) shell.hidden = true;
+      record.cancelPendingHide = null;
+    };
+    record.cancelPendingHide = () => {
+      shell.removeEventListener("transitionend", finish);
+      clearTimeout(timeoutId);
+      shell.classList.remove(leaveClass);
+    };
+    shell.addEventListener("transitionend", finish);
+    timeoutId = setTimeout(finish, 600);
+  }
+  classes(from, to, direction) {
+    if (direction > 0) return ["page-enter-next", "page-leave-next"];
+    if (direction < 0) return ["page-enter-prev", "page-leave-prev"];
+    const ids = this.getNavigablePages();
+    const a = ids.indexOf(from), b = ids.indexOf(to);
+    if (a >= 0 && b > a) return ["page-enter-next", "page-leave-next"];
+    if (b >= 0 && b < a) return ["page-enter-prev", "page-leave-prev"];
+    return ["page-enter-fade", "page-leave-fade"];
+  }
+  move(direction) {
+    const ids = this.getNavigablePages();
+    if (!ids.length) return;
+    const current = this.isTransientActive
+      ? this.transientOriginalPage
+      : (this.navigationTarget || this.currentPageName);
+    if (this.isTransientActive) this.cancelTransient();
+    const index = Math.max(0, ids.indexOf(current));
+    void this.navigateTo(ids[(index + direction + ids.length) % ids.length], false, direction);
+  }
+  nextPage() { this.move(1); }
+  prevPage() { this.move(-1); }
+  showTransient(id, durationMs) {
+    if (!this.manager.getTransientPages().some(({ manifest }) => manifest.id === id) || !this.currentPageName) return;
+    if (!this.isTransientActive) this.transientOriginalPage = this.currentPageName;
+    this.isTransientActive = true;
+    clearTimeout(this.transientTimer);
+    const requestId = ++this.transientRequestId;
+    void this.navigateTo(id, true).then(() => {
+      if (requestId !== this.transientRequestId || !this.isTransientActive) return;
+      if (this.currentPageName !== id) {
+        this.cancelTransient();
+        return;
       }
-
-      this.pageCleanupTimer = window.setTimeout(cleanupOldPages, 600);
-    }
+      this.transientTimer = setTimeout(() => this.restoreTransient(), Math.max(0, durationMs));
+    });
   }
-
-  getNavigablePages() {
-    return window.castBoardHost.featureGates.sysinfoBasic
-      ? ["lyrics", "sysinfo"]
-      : ["lyrics"];
-  }
-
-  nextPage() {
-    const basePage = this.isTransientActive ? (this.transientOriginalPage || "lyrics") : this.currentPageName;
-    if (this.isTransientActive) {
-      this.cancelTransient();
-    }
-    const pages = this.getNavigablePages();
-    const currentIndex = pages.indexOf(basePage);
-    if (currentIndex === -1) {
-      this.navigateTo("lyrics", false, 1);
-      return;
-    }
-    const nextIndex = (currentIndex + 1) % pages.length;
-    this.navigateTo(pages[nextIndex], false, 1);
-  }
-
-  prevPage() {
-    const basePage = this.isTransientActive ? (this.transientOriginalPage || "lyrics") : this.currentPageName;
-    if (this.isTransientActive) {
-      this.cancelTransient();
-    }
-    const pages = this.getNavigablePages();
-    const currentIndex = pages.indexOf(basePage);
-    if (currentIndex === -1) {
-      this.navigateTo("lyrics", false, -1);
-      return;
-    }
-    const prevIndex = (currentIndex - 1 + pages.length) % pages.length;
-    this.navigateTo(pages[prevIndex], false, -1);
-  }
-
-  toggle() {
-    this.nextPage();
-  }
-
-  showTransient(targetPage, durationMs) {
-    if (this.isTransientActive) {
-      if (this.currentPageName === targetPage) {
-        // If it's already showing, just extend the timer instead of queuing a duplicate
-        this.clearTransientTimer();
-        this.transientTimer = window.setTimeout(() => this.restoreTransient(), durationMs);
-      } else {
-        // Queue up the different transient page
-        this.transientQueue.push({ pageName: targetPage, durationMs });
-      }
-      return;
-    }
-
-    if (this.currentPageName !== targetPage) {
-      this.transientOriginalPage = this.currentPageName;
-      this.isTransientActive = true;
-      this.navigateTo(targetPage, true);
-      this.clearTransientTimer();
-      this.transientTimer = window.setTimeout(() => this.restoreTransient(), durationMs);
-    }
-  }
-
   restoreTransient() {
-    this.clearTransientTimer();
-    if (this.transientQueue.length > 0) {
-      const next = this.transientQueue.shift();
-      this.navigateTo(next.pageName, true);
-      this.transientTimer = window.setTimeout(() => this.restoreTransient(), next.durationMs);
-    } else {
-      const target = this.transientOriginalPage || "lyrics";
-      if (this.currentPageName !== target) {
-        this.navigateTo(target, true);
-      }
-      this.resetTransientState();
-    }
-  }
-
-  cancelTransient() {
-    this.clearTransientTimer();
-    this.transientQueue = [];
-    this.resetTransientState();
-  }
-
-  clearTransientTimer() {
-    if (this.transientTimer) {
-      window.clearTimeout(this.transientTimer);
-      this.transientTimer = 0;
-    }
-  }
-
-  resetTransientState() {
-    this.transientOriginalPage = null;
+    clearTimeout(this.transientTimer);
+    this.transientRequestId += 1;
+    const target = this.transientOriginalPage || "lyrics";
     this.isTransientActive = false;
+    this.transientOriginalPage = null;
+    void this.navigateTo(target, true);
   }
+  cancelTransient() {
+    clearTimeout(this.transientTimer);
+    this.transientRequestId += 1;
+    this.isTransientActive = false;
+    this.transientOriginalPage = null;
+  }
+}
+window.navManager = new NavigationManager(plugins);
 
-  destroy() {
-    if (this.pageCleanupTimer) {
-      window.clearTimeout(this.pageCleanupTimer);
-      this.pageCleanupTimer = 0;
+const icons = {
+  previous: '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>',
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
+};
+let indicator, indicatorTimer = 0, menu, pointer, dragged = false, indicatorWasVisible = false, resizeTimer = 0;
+
+function createIndicator() {
+  indicator ||= document.body.appendChild(Object.assign(document.createElement("div"), { id: "page-indicator", className: "page-indicator" }));
+  indicator.replaceChildren();
+  const controls = Object.assign(document.createElement("div"), { className: "media-controls-row" });
+  const labels = window.castBoardI18n.messages("controls");
+  for (const action of ["previous", "playPause", "next"]) {
+    const button = Object.assign(document.createElement("button"), { className: "media-control-btn", type: "button" });
+    button.dataset.action = action;
+    button.setAttribute("aria-label", labels[action]);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const command = action === "playPause" ? (button.dataset.paused === "true" ? "play" : "pause") : action;
+      if (action === "playPause") updatePlayPause(command === "pause");
+      host.sendMediaControl(command).catch((error) => {
+        if (action === "playPause") updatePlayPause(window.progressPaused);
+        log("app", "send-media-control-failed", { command, error: String(error) });
+      });
+      showIndicator();
+    });
+    controls.appendChild(button);
+  }
+  indicator.appendChild(controls);
+  const pages = plugins.getNavigablePages();
+  if (pages.length > 1) {
+    const dots = Object.assign(document.createElement("div"), { className: "page-indicator-dots" });
+    for (const { manifest } of pages) {
+      const dot = Object.assign(document.createElement("button"), { className: "page-indicator-dot", type: "button" });
+      dot.dataset.page = manifest.id;
+      dot.setAttribute("aria-label", manifest.name[host.config.language] || manifest.name.en || manifest.id);
+      dot.addEventListener("click", (event) => { event.stopPropagation(); void window.navManager.navigateTo(manifest.id); showIndicator(); });
+      dots.appendChild(dot);
     }
-    this.cancelTransient();
+    indicator.appendChild(dots);
   }
+  updatePlayPause(window.progressPaused);
+  updateIndicator(window.currentPageName || "lyrics");
 }
-
-window.navManager = new NavigationManager(window.pages);
-
-// ==== Global Event Dispatching ====
-function onTrackChange() {
-  if (pages[currentPageName] && typeof pages[currentPageName].onTrackChange === "function") {
-    pages[currentPageName].onTrackChange();
-  }
+function updatePlayPause(paused) {
+  const button = indicator?.querySelector('[data-action="playPause"]');
+  if (!button) return;
+  button.dataset.paused = paused ? "true" : "false";
+  button.innerHTML = paused ? icons.play : icons.pause;
+  for (const action of ["previous", "next"]) indicator.querySelector(`[data-action="${action}"]`).innerHTML = icons[action];
 }
-
-function onProgressChange() {
-  if (pages[currentPageName] && typeof pages[currentPageName].onProgressChange === "function") {
-    pages[currentPageName].onProgressChange();
-  }
+function updateIndicator(id) {
+  if (!indicator) return;
+  if (plugins.get(id)?.manifest.type === "transient") { hideIndicator(); return; }
+  for (const dot of indicator.querySelectorAll(".page-indicator-dot")) dot.classList.toggle("active", dot.dataset.page === id);
+  const expanded = id === "lyrics" && host.featureGates.mediaControl;
+  indicator.classList.toggle("expanded", expanded);
+  indicator.style.display = indicator.querySelectorAll(".page-indicator-dot").length > 1 || expanded ? "flex" : "none";
 }
-
-function applySysInfoStats(payload) {
-  function normalize(value) {
-    if (!Number.isFinite(value)) return null;
-    return Math.min(100, Math.max(0, value));
-  }
-
-  window.latestSysInfoStats = {
-    cpu: normalize(Number(payload?.cpu)),
-    mem: normalize(Number(payload?.mem)),
-    gpu: payload?.gpu == null ? null : normalize(Number(payload.gpu)),
-    netUp: normalizeRate(payload?.net_up ?? payload?.netUp),
-    netDown: normalizeRate(payload?.net_down ?? payload?.netDown),
-    diskRead: normalizeRate(payload?.disk_read ?? payload?.diskRead),
-    diskWrite: normalizeRate(payload?.disk_write ?? payload?.diskWrite),
-  };
-
-  window.dispatchEvent(new CustomEvent("sysinfo-stats-change", {
-    detail: window.latestSysInfoStats,
-  }));
+function showIndicator() {
+  if (!indicator || plugins.get(window.currentPageName)?.manifest.type === "transient") return;
+  indicator.classList.add("visible");
+  clearTimeout(indicatorTimer);
+  indicatorTimer = setTimeout(() => indicator?.classList.remove("visible"), 2800);
 }
+function hideIndicator() { clearTimeout(indicatorTimer); indicator?.classList.remove("visible"); }
 
-window.castBoardHost.on("sysinfo.stats", applySysInfoStats);
-
-// Handle resize event
-function onResize() {
-  resizeTimer = clearTimer(resizeTimer);
-  resizeTimer = window.setTimeout(() => {
-    resizeTimer = 0;
-    cacheLayoutMetrics();
-    if (pages[currentPageName] && typeof pages[currentPageName].onResize === "function") {
-      pages[currentPageName].onResize();
-    }
-  }, 80);
-}
-
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let isTouchActive = false;
-
-let mouseStartX = 0;
-let mouseStartY = 0;
-let mouseStartTime = 0;
-let isMouseDown = false;
-let isPointerDragging = false;
-let indicatorVisibleOnPointerDown = false;
-
-function onTouchStart(event) {
-  if (event.touches.length !== 1) {
-    isTouchActive = false;
-    return;
-  }
-  isPointerDragging = false;
-  indicatorVisibleOnPointerDown = isIndicatorVisible();
-  const touch = event.touches[0];
-  touchStartX = touch.clientX;
-  touchStartY = touch.clientY;
-  touchStartTime = Date.now();
-  isTouchActive = true;
-}
-
-function onTouchMove(event) {
-  if (!isTouchActive) return;
-  const touch = event.touches[0];
-  if (touch && Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY) > 8) {
-    isPointerDragging = true;
-  }
-  showIndicatorTemporarily();
-}
-
-function onTouchEnd(event) {
-  if (!isTouchActive) return;
-  isTouchActive = false;
-  const touch = event.changedTouches[0];
-  if (!touch) return;
-
-  const deltaX = touch.clientX - touchStartX;
-  const deltaY = touch.clientY - touchStartY;
-  const deltaTime = Date.now() - touchStartTime;
-
-  if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && deltaTime < 1000) {
-    if (deltaX < 0) {
-      if (window.navManager) window.navManager.nextPage();
-    } else {
-      if (window.navManager) window.navManager.prevPage();
-    }
-    showIndicatorTemporarily();
-  }
-}
-
-function onTouchCancel() {
-  isTouchActive = false;
-  isPointerDragging = false;
-}
-
-function onMouseDown(event) {
-  if (event.button !== 0) return;
-  if (event.target.closest?.(".castboard-context-menu, .page-indicator")) {
-    return;
-  }
-  isPointerDragging = false;
-  indicatorVisibleOnPointerDown = isIndicatorVisible();
-  mouseStartX = event.clientX;
-  mouseStartY = event.clientY;
-  mouseStartTime = Date.now();
-  isMouseDown = true;
-}
-
-function onMouseMove(event) {
-  if (!isMouseDown) return;
-  if (Math.hypot(event.clientX - mouseStartX, event.clientY - mouseStartY) > 8) {
-    isPointerDragging = true;
-  }
-  showIndicatorTemporarily();
-}
-
-function onMouseUp(event) {
-  if (!isMouseDown) return;
-  isMouseDown = false;
-
-  const deltaX = event.clientX - mouseStartX;
-  const deltaY = event.clientY - mouseStartY;
-  const deltaTime = Date.now() - mouseStartTime;
-
-  if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && deltaTime < 800) {
-    if (deltaX < 0) {
-      if (window.navManager) window.navManager.nextPage();
-    } else {
-      if (window.navManager) window.navManager.prevPage();
-    }
-    showIndicatorTemporarily();
-  }
-}
-
-function onPageClick(event) {
-  if (hideContextMenu()) return;
-  if (window.currentPageName === "time" && window.navManager) {
-    window.navManager.restoreTransient();
-    return;
-  }
-  if (event?.target?.closest?.(".castboard-context-menu, .page-indicator")) {
-    return;
-  }
-  if (isPointerDragging) {
-    isPointerDragging = false;
-    return;
-  }
-  if (indicatorVisibleOnPointerDown) {
-    hideIndicator();
-  } else {
-    showIndicatorTemporarily();
-  }
-}
-
-function preventContextMenu(event) {
-  event.preventDefault();
-  if (event.button !== 2) return;
-
-  if (!contextMenu) {
-    return;
-  }
-
-  contextMenu.hidden = false;
-  const inset = 8;
-  const maxLeft = Math.max(inset, window.innerWidth - contextMenu.offsetWidth - inset);
-  const maxTop = Math.max(inset, window.innerHeight - contextMenu.offsetHeight - inset);
-  contextMenu.style.left = `${Math.min(Math.max(inset, event.clientX), maxLeft)}px`;
-  contextMenu.style.top = `${Math.min(Math.max(inset, event.clientY), maxTop)}px`;
-}
-
-function preventWheelZoom(event) {
-  if (event.ctrlKey || event.metaKey) {
-    event.preventDefault();
-  }
-}
-
-let timeSchedulerTimerId = 0;
-let lastTimeTriggeredMinute = -1;
-
-function startTimeScheduler() {
-  timeSchedulerTimerId = window.setInterval(() => {
-    if (bootLocked) return;
-    const now = new Date();
-    const minutes = now.getMinutes();
-    if (minutes === 0 || minutes === 30) {
-      if (minutes !== lastTimeTriggeredMinute) {
-        lastTimeTriggeredMinute = minutes;
-        if (window.navManager) {
-          window.navManager.showTransient("time", 4000);
-        }
-      }
-    } else {
-      lastTimeTriggeredMinute = -1;
-    }
-  }, 1000);
-}
-
-function stopTimeScheduler() {
-  if (timeSchedulerTimerId) {
-    window.clearInterval(timeSchedulerTimerId);
-    timeSchedulerTimerId = 0;
-  }
-}
-
-function cleanupScheduledWork() {
-  resizeTimer = clearTimer(resizeTimer);
-  if (pageIndicatorTimer) {
-    clearTimeout(pageIndicatorTimer);
-    pageIndicatorTimer = 0;
-  }
-  if (optimisticDebounceTimer) {
-    clearTimeout(optimisticDebounceTimer);
-    optimisticDebounceTimer = 0;
-  }
-  stopTimeScheduler();
-  window.castBoardHost.stopMusicAlive();
-  window.castBoardHost.stopSysInfoAlive();
-  if (window.navManager) {
-    window.navManager.destroy();
-  }
-  Object.values(pages).forEach(page => {
-    if (typeof page.cleanup === "function") {
-      page.cleanup();
-    }
+function createMenu() {
+  const labels = window.castBoardI18n.messages("contextMenu");
+  menu = Object.assign(document.createElement("div"), { className: "castboard-context-menu", hidden: true });
+  menu.setAttribute("role", "menu");
+  menu.innerHTML = `<button class="castboard-context-menu-item" type="button" data-action="close" role="menuitem">${labels.close}</button>${host.config.debug ? `<button class="castboard-context-menu-item" type="button" data-action="open-devtools" role="menuitem">${labels.openDevTools}</button>` : ""}`;
+  menu.addEventListener("click", (event) => {
+    event.stopPropagation(); menu.hidden = true;
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    const request = action === "close" ? host.close() : action === "open-devtools" ? host.openDevTools() : null;
+    request?.catch((error) => log("app", "context-menu-action-failed", { action, error: String(error) }));
   });
+  document.body.appendChild(menu);
 }
 
 function bindEvents() {
-  createContextMenu();
-  createPageIndicator();
-  window.addEventListener("resize", onResize);
-  window.addEventListener("lyrics-track-change", onTrackChange);
-  window.addEventListener("lyrics-progress-change", onProgressChange);
-  window.addEventListener("playback-paused-change", () => {
-    if (optimisticDebounceTimer) return;
-    updatePlayPauseButtonState(window.progressPaused);
-  });
-  window.addEventListener("lyrics-lines-change", () => {
-    if (pages.lyrics && typeof pages.lyrics.layoutLyrics === "function") {
-      pages.lyrics.layoutLyrics();
-    }
-  });
-  window.addEventListener("click", onPageClick);
-  window.addEventListener("contextmenu", preventContextMenu);
-  window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") hideContextMenu();
-    if (event.key === "ArrowLeft") {
-      if (window.navManager) window.navManager.prevPage();
-      showIndicatorTemporarily();
-    } else if (event.key === "ArrowRight") {
-      if (window.navManager) window.navManager.nextPage();
-      showIndicatorTemporarily();
-    }
-  });
-  window.addEventListener("wheel", preventWheelZoom, { passive: false });
-  window.addEventListener("touchstart", onTouchStart, { passive: true });
-  window.addEventListener("touchmove", onTouchMove, { passive: true });
-  window.addEventListener("touchend", onTouchEnd, { passive: true });
-  window.addEventListener("touchcancel", onTouchCancel, { passive: true });
-  window.addEventListener("mousedown", onMouseDown);
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp);
-  window.addEventListener("beforeunload", cleanupScheduledWork);
-}
-
-const loadedPages = new Set();
-const totalPages = ["lyrics", "time", "sysinfo"];
-let bootCalled = false;
-
-window.onIframeLoad = function(pageName) {
-  loadedPages.add(pageName);
-
-  // Sync language to the loaded iframe
-  const lang = window.castBoardHost.config.language;
-  if (lang) {
-    const iframe = document.getElementById(`iframe-${pageName}`);
-    if (iframe?.contentDocument?.documentElement) {
-      iframe.contentDocument.documentElement.setAttribute('lang', lang);
-    }
-  }
-
-  if (totalPages.every(p => loadedPages.has(p))) {
-    if (!bootCalled) {
-      bootCalled = true;
-      boot();
-    }
-  }
-};
-
-// ==== Boot Flow ====
-function boot() {
-  bindEvents();
-  cacheLayoutMetrics();
-  startTimeScheduler();
-  log("app", "page-initialized", {
-    resolution: { width: window.innerWidth, height: window.innerHeight },
-    language: window.castBoardHost.config.language || document.documentElement.lang,
-  });
-
-  window.setTimeout(() => {
-    bootLocked = false;
-  }, 5000);
-
-  const ready = document.fonts?.ready ?? Promise.resolve();
-  ready.then(() => {
-    const stored = window.navManager.getStoredPage();
-    const initialPage = (stored === "sysinfo" && !window.castBoardHost.featureGates.sysinfoBasic)
-      ? "lyrics"
-      : stored;
-    window.navManager.navigateTo(initialPage);
-    window.castBoardHost.notifyPageReady()
-      .then(() => window.castBoardHost.startMusicAlive())
-      .catch((error) => {
-        log("app", "page-ready-request-failed", { error: String(error) });
+  createMenu(); createIndicator();
+  plugins.addEventListener("changed", (event) => {
+    createIndicator();
+    const record = plugins.get(event.detail.id);
+    if (record?.manifest.type === "transient") {
+      void window.navManager.ensureMounted(record).catch((error) => {
+        log("plugin", "transient-mount-failed", { id: record.manifest.id, error: String(error) });
       });
+    }
   });
+  plugins.addEventListener("failed", (event) => {
+    createIndicator();
+    if (event.detail.hook === "onResize" && event.detail.id === window.currentPageName && event.detail.id !== "lyrics") {
+      void window.navManager.navigateTo("lyrics");
+    }
+  });
+  addEventListener("lyrics-track-change", () => invokeActivePlugin("lyrics", "onTrackChange"));
+  addEventListener("lyrics-progress-change", () => invokeActivePlugin("lyrics", "onProgressChange"));
+  addEventListener("lyrics-lines-change", () => invokeActivePlugin("lyrics", "layoutLyrics"));
+  addEventListener("playback-paused-change", () => updatePlayPause(window.progressPaused));
+  addEventListener("resize", () => { resizeTimer = clearTimer(resizeTimer); resizeTimer = setTimeout(() => { cacheLayoutMetrics(); void plugins.resize({ width: innerWidth, height: innerHeight }); }, 80); });
+  addEventListener("pointerdown", (event) => {
+    if ((event.pointerType === "mouse" && event.button !== 0) || !event.isPrimary) return;
+    if (event.composedPath().includes(indicator) || event.composedPath().includes(menu)) return;
+    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, time: Date.now() };
+    dragged = false;
+    indicatorWasVisible = indicator?.classList.contains("visible");
+  });
+  addEventListener("pointermove", (event) => {
+    if (!pointer || (pointer.id !== undefined && pointer.id !== event.pointerId)) return;
+    pointer.lastX = event.clientX;
+    pointer.lastY = event.clientY;
+    if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 8) dragged = true;
+    showIndicator();
+  });
+  addEventListener("pointerup", (event) => {
+    if (!pointer || (pointer.id !== undefined && pointer.id !== event.pointerId)) return;
+    const dx = event.clientX - pointer.x, dy = event.clientY - pointer.y, elapsed = Date.now() - pointer.time;
+    pointer = null;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    if (absX > 36 && absX > absY && elapsed < 1000) {
+      dx < 0 ? window.navManager.nextPage() : window.navManager.prevPage();
+      showIndicator();
+    }
+  });
+  addEventListener("pointercancel", (event) => {
+    if (!pointer || (pointer.id !== undefined && pointer.id !== event.pointerId)) return;
+    const lastX = pointer.lastX ?? pointer.x, lastY = pointer.lastY ?? pointer.y;
+    const dx = lastX - pointer.x, dy = lastY - pointer.y, elapsed = Date.now() - pointer.time;
+    pointer = null;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    if (absX > 45 && absX > absY && elapsed < 1000) {
+      dx < 0 ? window.navManager.nextPage() : window.navManager.prevPage();
+      showIndicator();
+    } else {
+      dragged = false;
+      indicatorWasVisible = false;
+    }
+  });
+  addEventListener("click", (event) => {
+    if (!menu.hidden) { menu.hidden = true; return; }
+    if (event.composedPath().includes(indicator) || event.composedPath().includes(menu)) return;
+    if (event.composedPath().some(el => el.tagName === "BUTTON" || el.tagName === "A" || el.getAttribute?.("role") === "button")) return;
+    if (window.navManager.isTransientActive) { window.navManager.restoreTransient(); return; }
+    if (dragged) { dragged = false; return; }
+    indicatorWasVisible ? hideIndicator() : showIndicator();
+  });
+  addEventListener("keydown", (event) => {
+    if (event.key === "Escape") menu.hidden = true;
+    if (event.key === "ArrowLeft") window.navManager.prevPage();
+    if (event.key === "ArrowRight") window.navManager.nextPage();
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") showIndicator();
+  });
+  addEventListener("contextmenu", (event) => { event.preventDefault(); if (event.button !== 2) return; menu.hidden = false; menu.style.left = `${Math.max(8, Math.min(event.clientX, innerWidth - menu.offsetWidth - 8))}px`; menu.style.top = `${Math.max(8, Math.min(event.clientY, innerHeight - menu.offsetHeight - 8))}px`; });
+  addEventListener("wheel", (event) => { if (event.ctrlKey || event.metaKey) event.preventDefault(); }, { passive: false });
+  addEventListener("beforeunload", () => { host.stopMusicAlive(); host.stopSysInfoAlive(); for (const record of plugins.plugins.values()) void plugins.unmount(record); });
 }
+
+function invokeActivePlugin(id, method) {
+  const record = plugins.get(id);
+  if (record?.active) record.plugin[method]?.();
+}
+
+async function boot() {
+  plugins.registerBuiltin(lyricsManifest, lyrics, new URL("./plugins/builtin/lyrics/index.js", import.meta.url));
+  if (host.featureGates.sysinfoBasic) plugins.registerBuiltin(sysinfoManifest, sysinfo, new URL("./plugins/builtin/sysinfo/index.js", import.meta.url));
+  plugins.registerBuiltin(timeManifest, time, new URL("./plugins/builtin/time/index.js", import.meta.url));
+  bindEvents(); cacheLayoutMetrics();
+  host.on("plugins.register", (payload) => {
+    loader.loadRegistration(payload).then((results) => {
+      for (const result of results) {
+        if (result.status === "rejected") log("plugin", "external-load-failed", { error: String(result.reason) });
+      }
+    });
+  });
+  await (document.fonts?.ready ?? Promise.resolve());
+  await window.navManager.navigateTo(window.navManager.getStoredPage());
+  await window.navManager.prepareTransients();
+  host.notifyPageReady().then(() => host.startMusicAlive()).catch((error) => log("app", "page-ready-request-failed", { error: String(error) }));
+  loader.loadDevelopmentPlugins().then((results) => results.filter(({ status }) => status === "rejected").forEach(({ reason }) => log("plugin", "development-load-failed", { error: String(reason) }))).catch((error) => log("plugin", "development-index-failed", { error: String(error) }));
+}
+void boot().catch((error) => log("app", "boot-failed", { error: String(error) }));

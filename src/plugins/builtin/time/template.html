@@ -1,0 +1,51 @@
+<div class="page page-time">
+      <style>
+        .page-time {
+          z-index: 4;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #000000;
+          padding: 2vw;
+        }
+
+        .time-container {
+          text-align: center;
+          animation: time-scale-up 400ms var(--ease);
+        }
+
+        .time-clock {
+          font-family: "CastBoard Google Sans Flex", sans-serif;
+          font-size: clamp(90px, 28vh, 200px);
+          font-weight: 800;
+          line-height: 1;
+          color: #ffffff;
+          margin-bottom: 2vh;
+          letter-spacing: -0.02em;
+        }
+
+        .time-date {
+          font-size: clamp(24px, 6vh, 42px);
+          font-weight: 500;
+          color: rgba(248, 250, 252, 0.6);
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+        }
+
+        @keyframes time-scale-up {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      </style>
+      <div class="time-container">
+        <div class="time-clock" id="time-clock-display">00:00</div>
+        <div class="time-date" id="time-date-display">DATE</div>
+      </div>
+    </div>

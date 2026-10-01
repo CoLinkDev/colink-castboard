@@ -5,6 +5,7 @@
       controls: { previous: "Previous", playPause: "Play / Pause", next: "Next" },
       lyrics: { noLyrics: "No lyrics available" },
       track: { unknownTitle: "Unknown Song", unknownAuthor: "Unknown Artist" },
+      plugin: { unavailable: "Plugin unavailable" },
       sysinfo: {
         cpuDesc: "Processor", memDesc: "Memory", gpuDesc: "Graphics", netDownDesc: "Download",
         netUpDesc: "Upload", diskReadDesc: "Disk Read", diskWriteDesc: "Disk Write",
@@ -15,6 +16,7 @@
       controls: { previous: "上一曲", playPause: "播放 / 暂停", next: "下一曲" },
       lyrics: { noLyrics: "暂无歌词" },
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知艺术家" },
+      plugin: { unavailable: "插件不可用" },
       sysinfo: {
         cpuDesc: "处理器", memDesc: "内存", gpuDesc: "图形", netDownDesc: "下载",
         netUpDesc: "上传", diskReadDesc: "硬盘读取", diskWriteDesc: "硬盘写入",
@@ -25,6 +27,7 @@
       controls: { previous: "上一首", playPause: "播放 / 暫停", next: "下一首" },
       lyrics: { noLyrics: "暫無歌詞" },
       track: { unknownTitle: "未知歌曲", unknownAuthor: "未知藝術家" },
+      plugin: { unavailable: "外掛程式無法使用" },
       sysinfo: {
         cpuDesc: "處理器", memDesc: "記憶體", gpuDesc: "圖形", netDownDesc: "下載",
         netUpDesc: "上傳", diskReadDesc: "硬碟讀取", diskWriteDesc: "硬碟寫入",
@@ -35,6 +38,7 @@
       controls: { previous: "Vorheriger", playPause: "Wiedergabe / Pause", next: "Nächster" },
       lyrics: { noLyrics: "Keine Liedtexte verfügbar" },
       track: { unknownTitle: "Unbekannter Titel", unknownAuthor: "Unbekannter Künstler" },
+      plugin: { unavailable: "Plugin nicht verfügbar" },
       sysinfo: {
         cpuDesc: "Prozessor", memDesc: "Speicher", gpuDesc: "Grafik", netDownDesc: "Download",
         netUpDesc: "Upload", diskReadDesc: "Datenträger-Lesen", diskWriteDesc: "Datenträger-Schreiben",
@@ -45,6 +49,7 @@
       controls: { previous: "Anterior", playPause: "Reproducir / Pausar", next: "Siguiente" },
       lyrics: { noLyrics: "No hay letras disponibles" },
       track: { unknownTitle: "Canción desconocida", unknownAuthor: "Artista desconocido" },
+      plugin: { unavailable: "Plugin no disponible" },
       sysinfo: {
         cpuDesc: "Procesador", memDesc: "Memoria", gpuDesc: "Gráficos", netDownDesc: "Descarga",
         netUpDesc: "Subida", diskReadDesc: "Lectura de disco", diskWriteDesc: "Escritura de disco",
@@ -55,6 +60,7 @@
       controls: { previous: "前の曲", playPause: "再生 / 一時停止", next: "次の曲" },
       lyrics: { noLyrics: "歌詞はありません" },
       track: { unknownTitle: "不明な曲", unknownAuthor: "不明なアーティスト" },
+      plugin: { unavailable: "プラグインを利用できません" },
       sysinfo: {
         cpuDesc: "プロセッサ", memDesc: "メモリ", gpuDesc: "グラフィックス", netDownDesc: "ダウンロード",
         netUpDesc: "アップロード", diskReadDesc: "ディスク読み取り", diskWriteDesc: "ディスク書き込み",
@@ -65,6 +71,7 @@
       controls: { previous: "이전 곡", playPause: "재생 / 일시정지", next: "다음 곡" },
       lyrics: { noLyrics: "가사가 없습니다" },
       track: { unknownTitle: "알 수 없는 노래", unknownAuthor: "알 수 없는 아티스트" },
+      plugin: { unavailable: "플러그인을 사용할 수 없음" },
       sysinfo: {
         cpuDesc: "프로세서", memDesc: "메모리", gpuDesc: "그래픽", netDownDesc: "다운로드",
         netUpDesc: "업로드", diskReadDesc: "디스크 읽기", diskWriteDesc: "디스크 쓰기",
@@ -75,6 +82,7 @@
       controls: { previous: "Предыдущий трек", playPause: "Воспроизведение / Пауза", next: "Следующий трек" },
       lyrics: { noLyrics: "Нет текста песни" },
       track: { unknownTitle: "Неизвестная композиция", unknownAuthor: "Неизвестный исполнитель" },
+      plugin: { unavailable: "Плагин недоступен" },
       sysinfo: {
         cpuDesc: "Процессор", memDesc: "Память", gpuDesc: "Графика", netDownDesc: "Загрузка",
         netUpDesc: "Отдача", diskReadDesc: "Чтение диска", diskWriteDesc: "Запись на диск",

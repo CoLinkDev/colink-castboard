@@ -35,6 +35,10 @@ Each host application includes this repository as a **git submodule** at `./cast
 
 During development, both hosts connect to the dev server (port 5173) instead of using local files.
 
+## Plugins
+
+CastBoard pages use a common Shadow DOM plugin runtime. See [Plugin Development](docs/PLUGINS.md) for the manifest, lifecycle, external registration, and local development contracts.
+
 ## Project Structure
 
 ```text

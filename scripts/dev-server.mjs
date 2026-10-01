@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(fileURLToPath(new URL('../src', import.meta.url)))
 const port = Number(process.env.PORT || 5173)
 const clients = new Set()
+const devPlugins = resolve(root, 'plugins', 'dev')
 
 const types = new Map([
   ['.css', 'text/css; charset=utf-8'],
@@ -40,6 +41,17 @@ function injectReload(body) {
 }
 
 const server = createServer((req, res) => {
+  if (req.url?.startsWith('/__castboard_dev_plugins')) {
+    void listDevelopmentPlugins().then((plugins) => {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' })
+      res.end(JSON.stringify(plugins))
+    }).catch((error) => {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ error: String(error) }))
+    })
+    return
+  }
+
   if (req.url?.startsWith('/__castboard_reload')) {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -87,6 +99,20 @@ const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': type })
   createReadStream(target).pipe(res)
 })
+
+async function listDevelopmentPlugins() {
+  if (!existsSync(devPlugins)) return []
+  const entries = await readdir(devPlugins, { withFileTypes: true })
+  const result = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const manifestPath = join(devPlugins, entry.name, 'manifest.json')
+    if (!existsSync(manifestPath)) continue
+    const manifest = JSON.parse(await import('node:fs/promises').then(({ readFile }) => readFile(manifestPath, 'utf8')))
+    result.push({ manifest, baseUrl: `/plugins/dev/${encodeURIComponent(entry.name)}/` })
+  }
+  return result
+}
 
 async function watchTree(dir) {
   watch(dir, { recursive: true }, () => {
