@@ -5,12 +5,12 @@ export class PluginLoader {
     this.pluginManager = pluginManager;
   }
 
-  async load({ manifest, baseUrl }, { enforceMinimumVersion = true } = {}) {
+  async load({ manifest, baseUrl }) {
     if (!/^\d+\.\d+\.\d+$/.test(manifest?.minCastBoardVersion || "")) {
       throw new TypeError("Plugin minCastBoardVersion must be a semantic version");
     }
     if (
-      enforceMinimumVersion
+      !window.castBoardHost.config.debug
       && window.castBoardUtils.compareSemver(CASTBOARD_VERSION, manifest.minCastBoardVersion) < 0
     ) {
       throw new Error(`Plugin ${manifest.id} requires CastBoard ${manifest.minCastBoardVersion} or newer`);
@@ -35,8 +35,6 @@ export class PluginLoader {
     const response = await fetch("/__castboard_dev_plugins", { cache: "no-store" });
     if (!response.ok) throw new Error(`Development plugin index failed: ${response.status}`);
     const plugins = await response.json();
-    return Promise.allSettled(plugins.map((plugin) => (
-      this.load(plugin, { enforceMinimumVersion: false })
-    )));
+    return Promise.allSettled(plugins.map((plugin) => this.load(plugin)));
   }
 }

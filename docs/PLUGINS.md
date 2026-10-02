@@ -217,15 +217,17 @@ The host event `plugins.register` accepts one registration, an array of registra
 }
 ```
 
-Before importing the entry module, the loader validates `minCastBoardVersion` and rejects a plugin that requires a newer CastBoard version. Browser dynamic-import and CORS rules apply to remote entry URLs. After import, CastBoard validates the complete manifest, lifecycle object, and unique plugin id before registration.
+Before importing the entry module, the loader validates `minCastBoardVersion` and rejects a plugin that requires a newer CastBoard version unless CastBoard is running with the `debug` param. Browser dynamic-import and CORS rules apply to remote entry URLs. After import, CastBoard validates the complete manifest, lifecycle object, and unique plugin id before registration.
 
 Registration payloads are settled independently. One failed item in a batch does not prevent other valid items from registering.
 
 ## 9. Local development
 
-Create an unpacked plugin at `src/plugins/dev/<plugin-name>/`, run `pnpm dev`, and open CastBoard with the `debug` query parameter. In debug mode the runtime reads `/__castboard_dev_plugins` and loads each discovered package through the external registration path. Development packages still undergo manifest and lifecycle validation, but this local scan path does not enforce `minCastBoardVersion` because untagged development builds use a non-release version identifier. Host-registered plugins always enforce the minimum CastBoard version.
+Create an unpacked plugin at `src/plugins/dev/<plugin-name>/`, run `pnpm dev`, and open CastBoard with the `debug` query parameter. In debug mode the runtime reads `/__castboard_dev_plugins` and loads each discovered package through the external registration path. Development packages still undergo manifest and lifecycle validation.
 
 The development server scans immediate child directories and includes only those containing a file named exactly `manifest.json`. To disable a development plugin without deleting it, rename that file, for example to `manifest.json.disabled`. Production builds exclude the entire `src/plugins/dev` directory.
+
+When the runtime `debug` param is enabled, minimum CastBoard version enforcement is disabled for both development packages and host-registered plugins. Manifest syntax and lifecycle validation remain enforced.
 
 ## 10. Isolation, failures, and fallback
 
