@@ -146,6 +146,7 @@
     }
 
     dispatch(message) {
+      log("mock-ipc", "event-sent", message);
       for (const subscriber of this.subscribers) {
         try {
           subscriber(message);

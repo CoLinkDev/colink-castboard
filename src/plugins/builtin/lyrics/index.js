@@ -42,16 +42,16 @@ const TEMPORARY_FOCUS_DURATION_MS = 5000;
         let lastRenderedIndex = null;
         const heightCache = new Map();
         const SOURCE_ICONS = {
-          ncm: new URL("../../../icons/neteasecloudmusic.svg", import.meta.url).href,
-          neteasecloudmusic: new URL("../../../icons/neteasecloudmusic.svg", import.meta.url).href,
-          qqmusic: new URL("../../../icons/qqmusic.svg", import.meta.url).href,
-          applemusic: new URL("../../../icons/applemusic.svg", import.meta.url).href,
-          spotify: new URL("../../../icons/spotify.svg", import.meta.url).href,
-          ytmusic: new URL("../../../icons/youtubemusic.svg", import.meta.url).href,
-          bilibili: new URL("../../../icons/bilibili.svg", import.meta.url).href,
-          tidal: new URL("../../../icons/tidal.svg", import.meta.url).href,
-          deezer: new URL("../../../icons/deezer.svg", import.meta.url).href,
-          kugou: new URL("../../../icons/kugou.svg", import.meta.url).href,
+          ncm: new URL("./icons/neteasecloudmusic.svg", import.meta.url).href,
+          neteasecloudmusic: new URL("./icons/neteasecloudmusic.svg", import.meta.url).href,
+          qqmusic: new URL("./icons/qqmusic.svg", import.meta.url).href,
+          applemusic: new URL("./icons/applemusic.svg", import.meta.url).href,
+          spotify: new URL("./icons/spotify.svg", import.meta.url).href,
+          ytmusic: new URL("./icons/youtubemusic.svg", import.meta.url).href,
+          bilibili: new URL("./icons/bilibili.svg", import.meta.url).href,
+          tidal: new URL("./icons/tidal.svg", import.meta.url).href,
+          deezer: new URL("./icons/deezer.svg", import.meta.url).href,
+          kugou: new URL("./icons/kugou.svg", import.meta.url).href,
         };
         function noLyricsLabel() {
           return window.castBoardI18n.t("lyrics.noLyrics");
