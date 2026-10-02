@@ -42,15 +42,16 @@ const TEMPORARY_FOCUS_DURATION_MS = 5000;
         let lastRenderedIndex = null;
         const heightCache = new Map();
         const SOURCE_ICONS = {
-          ncm: "icons/neteasecloudmusic.svg",
-          qqmusic: "icons/qqmusic.svg",
-          applemusic: "icons/applemusic.svg",
-          spotify: "icons/spotify.svg",
-          ytmusic: "icons/youtubemusic.svg",
-          bilibili: "icons/bilibili.svg",
-          tidal: "icons/tidal.svg",
-          deezer: "icons/deezer.svg",
-          kugou: "icons/kugou.svg",
+          ncm: new URL("../../../icons/neteasecloudmusic.svg", import.meta.url).href,
+          neteasecloudmusic: new URL("../../../icons/neteasecloudmusic.svg", import.meta.url).href,
+          qqmusic: new URL("../../../icons/qqmusic.svg", import.meta.url).href,
+          applemusic: new URL("../../../icons/applemusic.svg", import.meta.url).href,
+          spotify: new URL("../../../icons/spotify.svg", import.meta.url).href,
+          ytmusic: new URL("../../../icons/youtubemusic.svg", import.meta.url).href,
+          bilibili: new URL("../../../icons/bilibili.svg", import.meta.url).href,
+          tidal: new URL("../../../icons/tidal.svg", import.meta.url).href,
+          deezer: new URL("../../../icons/deezer.svg", import.meta.url).href,
+          kugou: new URL("../../../icons/kugou.svg", import.meta.url).href,
         };
         function noLyricsLabel() {
           return window.castBoardI18n.t("lyrics.noLyrics");
@@ -583,7 +584,7 @@ export const manifest = Object.freeze({
     ru: "Показывает синхронизированный текст и сведения о текущем треке.",
   },
   version: "1.0.0",
-  minCastBoardVersion: "1.0.0",
+  minCastBoardVersion: "2.2.0",
   type: "navigable",
   entry: "index.js",
 });

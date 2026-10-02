@@ -39,7 +39,7 @@ Plugins execute in the CastBoard document. Their UI is isolated by a Shadow DOM 
     "zh-CN": "显示当前天气状况。"
   },
   "version": "1.0.0",
-  "minCastBoardVersion": "1.0.0",
+  "minCastBoardVersion": "2.2.0",
   "type": "navigable",
   "entry": "index.js"
 }
@@ -209,7 +209,7 @@ The host event `plugins.register` accepts one registration, an array of registra
     "name": { "en": "Weather" },
     "description": { "en": "Displays current weather conditions." },
     "version": "1.0.0",
-    "minCastBoardVersion": "1.0.0",
+    "minCastBoardVersion": "2.2.0",
     "type": "navigable",
     "entry": "index.js"
   },
@@ -223,7 +223,7 @@ Registration payloads are settled independently. One failed item in a batch does
 
 ## 9. Local development
 
-Create an unpacked plugin at `src/plugins/dev/<plugin-name>/`, run `pnpm dev`, and open CastBoard with the `debug` query parameter. In debug mode the runtime reads `/__castboard_dev_plugins` and loads each discovered package through the external registration path.
+Create an unpacked plugin at `src/plugins/dev/<plugin-name>/`, run `pnpm dev`, and open CastBoard with the `debug` query parameter. In debug mode the runtime reads `/__castboard_dev_plugins` and loads each discovered package through the external registration path. Development packages still undergo manifest and lifecycle validation, but this local scan path does not enforce `minCastBoardVersion` because untagged development builds use a non-release version identifier. Host-registered plugins always enforce the minimum CastBoard version.
 
 The development server scans immediate child directories and includes only those containing a file named exactly `manifest.json`. To disable a development plugin without deleting it, rename that file, for example to `manifest.json.disabled`. Production builds exclude the entire `src/plugins/dev` directory.
 

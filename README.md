@@ -2,11 +2,11 @@
 
 Standalone CastBoard web surface shared by CoLink Desktop and CoLink Android.
 
-**Tech stack:** HTML · CSS · JavaScript · Node.js development server
+**Tech stack:** HTML · CSS · JavaScript · Vite
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 20.19+ or 22.12+
 - [pnpm](https://pnpm.io/)
 
 ## Development
@@ -16,7 +16,7 @@ pnpm install
 pnpm dev
 ```
 
-The development server listens on port `5173`, serves `src/`, and reloads connected pages when files change.
+The Vite development server listens on `0.0.0.0:5173`, supports local-network device testing, and exposes unpacked development plugins from `src/plugins/dev/`.
 
 ## Build
 
@@ -24,14 +24,14 @@ The development server listens on port `5173`, serves `src/`, and reloads connec
 pnpm build
 ```
 
-Produces `dist/` with release-ready assets (fonts trimmed to CN + Google Sans Flex subsets). Host applications consume this output for bundling.
+Produces `dist/` with release-ready assets (fonts trimmed to CN + Google Sans Flex subsets). Builds from a release tag embed that tag's semantic version; untagged local builds embed a Git hash with a `-dev` suffix.
 
 ## Host Integration
 
-Each host application includes this repository as a **git submodule** at `./castboard`. Release builds run `pnpm build` inside the submodule and copy `dist/` into their bundled resources.
+Tagged releases publish `castboard-dist.zip`, containing the top-level `dist/` directory. Host applications declare a CastBoard version and download that immutable release asset into a version-isolated build cache.
 
-- **Desktop:** `scripts/sync-castboard.mjs` triggers the build and copies `dist/` to `public/castboard/`.
-- **Android:** Gradle `buildCastBoard` task runs `pnpm build`; `syncReleaseCastBoardAssets` copies `dist/` into generated app assets.
+- **Desktop:** `scripts/sync-castboard.mjs` restores the declared release or uses `COLINK_CASTBOARD_LOCAL_PATH`, then copies it to `public/castboard/`.
+- **Android:** Gradle restores the declared release or uses `CASTBOARD_LOCAL_PATH`, then copies it into generated app assets.
 
 During development, both hosts connect to the dev server (port 5173) instead of using local files.
 
@@ -44,6 +44,5 @@ CastBoard pages use a common Shadow DOM plugin runtime. See [Plugin Development]
 ```text
 src/                    CastBoard web assets (source of truth)
 dist/                   Build output (gitignored)
-scripts/dev-server.mjs  Development server with live reload
-scripts/build.mjs       Release build script
+vite.config.mjs         Development server and release build configuration
 ```

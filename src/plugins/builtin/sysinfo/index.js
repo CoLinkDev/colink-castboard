@@ -260,7 +260,7 @@ export const manifest = Object.freeze({
     ru: "В реальном времени показывает активность процессора, памяти, графики, сети и дисков.",
   },
   version: "1.0.0",
-  minCastBoardVersion: "1.0.0",
+  minCastBoardVersion: "2.2.0",
   type: "navigable",
   entry: "index.js",
 });

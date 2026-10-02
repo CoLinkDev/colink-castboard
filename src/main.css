@@ -41,8 +41,7 @@
 
 @font-face {
   font-family: "CastBoard Source Han Sans SC";
-  src: url("fonts/SourceHanSansSC-VF.ttf.woff2") format("woff2"),
-       url("fonts/SourceHanSansCN-VF.ttf.woff2") format("woff2");
+  src: url("fonts/SourceHanSansCN-VF.ttf.woff2") format("woff2");
   font-style: normal;
   font-weight: 250 1000;
   font-display: block;

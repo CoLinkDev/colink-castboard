@@ -1,1 +1,3 @@
-export const CASTBOARD_VERSION = "1.0.0";
+export const CASTBOARD_VERSION = typeof __CASTBOARD_VERSION__ !== "undefined"
+  ? __CASTBOARD_VERSION__
+  : "0.0.0-dev";

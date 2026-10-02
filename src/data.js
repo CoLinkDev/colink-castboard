@@ -1,3 +1,4 @@
+const { formatDuration, log } = window.castBoardUtils;
 const LYRICS = [];
 const TRACK_INFO = {
   title: "",

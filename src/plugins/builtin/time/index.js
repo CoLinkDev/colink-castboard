@@ -93,7 +93,7 @@ export const manifest = Object.freeze({
     ru: "Показывает текущие время и дату каждые полчаса.",
   },
   version: "1.0.0",
-  minCastBoardVersion: "1.0.0",
+  minCastBoardVersion: "2.2.0",
   type: "transient",
   entry: "index.js",
 });

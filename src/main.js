@@ -1,3 +1,7 @@
+import "./util.js";
+import "./host-bridge.js";
+import "./i18n.js";
+import "./data.js";
 import { PluginLoader } from "./plugins/loader.js";
 import { PluginManager } from "./plugins/manager.js";
 import lyrics, { manifest as lyricsManifest } from "./plugins/builtin/lyrics/index.js";
@@ -478,9 +482,10 @@ function invokeActivePlugin(id, method) {
 }
 
 async function boot() {
-  plugins.registerBuiltin(lyricsManifest, lyrics, new URL("./plugins/builtin/lyrics/index.js", import.meta.url));
-  if (host.featureGates.sysinfoBasic) plugins.registerBuiltin(sysinfoManifest, sysinfo, new URL("./plugins/builtin/sysinfo/index.js", import.meta.url));
-  plugins.registerBuiltin(timeManifest, time, new URL("./plugins/builtin/time/index.js", import.meta.url));
+  const bundledPluginBaseUrl = import.meta.url;
+  plugins.registerBuiltin(lyricsManifest, lyrics, bundledPluginBaseUrl);
+  if (host.featureGates.sysinfoBasic) plugins.registerBuiltin(sysinfoManifest, sysinfo, bundledPluginBaseUrl);
+  plugins.registerBuiltin(timeManifest, time, bundledPluginBaseUrl);
   bindEvents(); cacheLayoutMetrics();
   host.on("plugins.register", (payload) => {
     loader.loadRegistration(payload).then((results) => {
