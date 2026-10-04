@@ -58,12 +58,21 @@ Plugins execute in the CastBoard document. Their UI is isolated by a Shadow DOM 
 | `type` | Yes | string | Either `navigable` or `transient`. |
 | `entry` | Yes | string | Non-empty package-relative entry module path. |
 | `icon` | No | implementation-defined | Reserved for host presentation. The current runtime MAY ignore it. |
+| `configSchema` | No | CastBoard Config Schema | Declares host-rendered configuration fields. Plugins using it MUST require CastBoard `2.3.0` or newer. |
 
 The restricted SemVer form accepted by this schema is exactly three decimal components matching `^\d+\.\d+\.\d+$`. Pre-release and build suffixes are not accepted.
 
 A localized strings value MUST be a non-empty object whose keys and values are non-empty strings. Keys SHOULD be BCP 47 language tags, and an `en` value SHOULD be present as the portable fallback. The current built-in locale order is English, Simplified Chinese, Japanese, Korean, Traditional Chinese, German, Spanish, and Russian.
 
 Consumers MUST ignore unrecognized manifest fields so that compatible schema revisions can add metadata. The current runtime validates the syntax of `schemaVersion`; it does not negotiate schema features. Plugin authors therefore MUST NOT claim a schema version whose contract they do not implement.
+
+### 3.3 CastBoard Config Schema
+
+`configSchema` is a restricted CastBoard-specific dialect, not a general JSON Schema implementation. Its root MUST contain exactly `type`, `additionalProperties`, and `properties`; `type` MUST be `"object"`, `additionalProperties` MUST be `false`, and `properties` MUST be an object. Nested objects and arrays are not supported.
+
+Every property MUST declare one of `boolean`, `number`, `integer`, or `string` as its `type` and MUST provide a valid `default`. `title` and `description` MAY contain localized strings. Numeric fields MAY declare finite `minimum` and `maximum` values. String fields MAY declare `format: "password"`, which is only a presentation hint and does not provide secure storage or plugin isolation. String fields MAY also declare a non-empty array of unique string `enum` values and an `enumTitles` object containing localized labels for every enum value.
+
+Unknown schema keywords are rejected. Defaults MUST satisfy their declared type, range, and enum. A plugin with `configSchema` MUST set `minCastBoardVersion` to `2.3.0` or newer.
 
 ## 4. Plugin module
 
@@ -76,6 +85,7 @@ export default {
   async deactivate(shadowRoot, context) {},
   async unmount(shadowRoot, context) {},
   async onResize(shadowRoot, context, metrics) {},
+  async onConfigChange(shadowRoot, context, newConfig, previousConfig) {},
 }
 ```
 
@@ -104,6 +114,7 @@ The following rules apply:
 5. `unmount` first causes an active plugin to be deactivated. It MUST release event subscriptions, timers, observers, network activity, and retained DOM references.
 6. A plugin MUST tolerate more than one `activate`/`deactivate` cycle after a single `mount`.
 7. A plugin MUST keep any background listener required to request temporary focus alive while mounted and inactive.
+8. `onConfigChange` runs for a mounted plugin after `context.config` has changed. Updates are serialized with navigation. If the hook is absent, or if it rejects, CastBoard performs a complete unmount and mount using the new configuration and reactivates a previously active plugin.
 
 CastBoard mounts transient plugins during startup because they can schedule their own appearances. Navigable plugins may be mounted before their first activation or lazily when selected; code MUST support either order.
 
@@ -111,7 +122,13 @@ CastBoard mounts transient plugins during startup because they can schedule thei
 
 The context and its service objects are frozen. Plugins MUST treat them as immutable capabilities.
 
-### 6.1 `events`
+### 6.1 `config`
+
+`context.config` is a getter that returns the current frozen effective configuration. Its object identity changes after a configuration update, while the containing context object remains stable. The effective configuration contains every schema property and is calculated from schema defaults plus valid user overrides. Unknown or invalid stored overrides are ignored.
+
+Hosts persist and transmit a complete snapshot of user overrides rather than the effective configuration. An empty object therefore means “use all current schema defaults”. `format: "password"` only requests masked form input; configuration values remain available to the plugin in the shared CastBoard JavaScript environment.
+
+### 6.2 `events`
 
 ```js
 const unsubscribe = context.events.on(type, handler)
@@ -119,7 +136,7 @@ const unsubscribe = context.events.on(type, handler)
 
 `events.on` subscribes to a CastBoard host-bridge event and returns an unsubscribe function. The plugin MUST retain and invoke that function during `unmount` unless the subscription is otherwise known to have ended. DOM events generated inside CastBoard are ordinary browser events and MAY be consumed with `addEventListener` when appropriate.
 
-### 6.2 `navigation`
+### 6.3 `navigation`
 
 ```js
 context.navigation.showTransient(durationMs)
@@ -160,7 +177,7 @@ export default {
 }
 ```
 
-### 6.3 `storage`
+### 6.4 `storage`
 
 ```js
 context.storage.get(key)
@@ -169,11 +186,11 @@ context.storage.set(key, value)
 
 Storage is backed by `localStorage` and namespaced as `castboard.plugin.<plugin-id>.<key>`. `set` JSON-serializes its value, and `get` returns the parsed value or `null` when the key does not exist. Values MUST be JSON-serializable. Parsing, serialization, quota, and browser storage errors are surfaced to the caller.
 
-### 6.4 `i18n`
+### 6.5 `i18n`
 
 `context.i18n.language` is the host-selected language string captured when the plugin manager is created. Plugins SHOULD provide an English fallback for unsupported or empty values.
 
-### 6.5 `assets`
+### 6.6 `assets`
 
 ```js
 const url = context.assets.resolveAsset("assets/icon.svg")
@@ -209,13 +226,43 @@ The host event `plugins.register` accepts one registration, an array of registra
     "name": { "en": "Weather" },
     "description": { "en": "Displays current weather conditions." },
     "version": "1.0.0",
-    "minCastBoardVersion": "2.2.0",
+    "minCastBoardVersion": "2.3.0",
     "type": "navigable",
-    "entry": "index.js"
+    "entry": "index.js",
+    "configSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "units": {
+          "type": "string",
+          "default": "metric",
+          "enum": ["metric", "imperial"],
+          "title": { "en": "Units" }
+        }
+      }
+    }
   },
-  "baseUrl": "https://castboard.local/plugins/com.example.weather/"
+  "baseUrl": "https://castboard.local/plugins/com.example.weather/",
+  "config": { "units": "metric" }
 }
 ```
+
+The optional `config` member is the complete user-override snapshot. CastBoard validates it against the manifest schema, ignores unknown or invalid property values, and combines valid overrides with defaults.
+
+After registration, a host MAY deliver another complete override snapshot with `plugin.configure`:
+
+```json
+{
+  "channel": "castboard",
+  "type": "plugin.configure",
+  "payload": {
+    "id": "com.example.weather",
+    "config": { "units": "imperial" }
+  }
+}
+```
+
+Delivery is asynchronous. Host persistence is the source of truth; CastBoard does not acknowledge application back to the host.
 
 Before importing the entry module, the loader validates `minCastBoardVersion` and rejects a plugin that requires a newer CastBoard version unless CastBoard is running with the `debug` param. Browser dynamic-import and CORS rules apply to remote entry URLs. After import, CastBoard validates the complete manifest, lifecycle object, and unique plugin id before registration.
 

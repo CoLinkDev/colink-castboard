@@ -5,7 +5,7 @@ export class PluginLoader {
     this.pluginManager = pluginManager;
   }
 
-  async load({ manifest, baseUrl }) {
+  async load({ manifest, baseUrl, config = {} }) {
     if (!/^\d+\.\d+\.\d+$/.test(manifest?.minCastBoardVersion || "")) {
       throw new TypeError("Plugin minCastBoardVersion must be a semantic version");
     }
@@ -18,7 +18,7 @@ export class PluginLoader {
     const normalizedBaseUrl = new URL(baseUrl, window.location.href);
     const entryUrl = new URL(manifest.entry, normalizedBaseUrl);
     const module = await import(/* @vite-ignore */ entryUrl.href);
-    return this.pluginManager.registerExternal(manifest, module.default, normalizedBaseUrl.href);
+    return this.pluginManager.registerExternal(manifest, module.default, normalizedBaseUrl.href, config);
   }
 
   async loadRegistration(payload) {

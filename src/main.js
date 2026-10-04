@@ -70,6 +70,37 @@ class NavigationManager {
   async prepareTransients() {
     for (const record of this.manager.getTransientPages()) await this.ensureMounted(record);
   }
+  configurePlugin(id, config) {
+    const operation = this.navigationQueue.then(() => (
+      this.manager.updatePluginConfig(id, config, (record) => this.reloadPlugin(record))
+    ));
+    this.navigationQueue = operation.catch((error) => {
+      log("plugin", "config-update-failed", { id, error: String(error) });
+    });
+    return operation;
+  }
+  async reloadPlugin(record) {
+    if (!record.mounted) return true;
+    const wasActive = record.active;
+    const wasHidden = record.shell?.hidden ?? true;
+    this.clearPendingHide(record);
+    if (!(await this.manager.unmount(record))) {
+      if (wasActive && record.manifest.id !== "lyrics") void this.navigateTo("lyrics", true);
+      return false;
+    }
+    if (!(await this.ensureMounted(record))) {
+      if (wasActive && record.shell) this.showFailedPage(record);
+      if (wasActive && record.manifest.id !== "lyrics") void this.navigateTo("lyrics", true);
+      return false;
+    }
+    record.shell.hidden = wasActive ? false : wasHidden;
+    if (!wasActive) return true;
+    record.shell.classList.add("page-active");
+    if (await this.manager.activate(record)) return true;
+    this.showFailedPage(record);
+    if (record.manifest.id !== "lyrics") void this.navigateTo("lyrics", true);
+    return false;
+  }
   navigateTo(id, temporary = false, direction = 0) {
     if (!temporary) {
       this.cancelTransient();
@@ -493,6 +524,14 @@ async function boot() {
         if (result.status === "rejected") log("plugin", "external-load-failed", { error: String(result.reason) });
       }
     });
+  });
+  host.on("plugin.configure", (payload) => {
+    const id = payload?.id;
+    if (typeof id !== "string" || !id || !payload?.config || typeof payload.config !== "object" || Array.isArray(payload.config)) {
+      log("plugin", "config-update-invalid", { id });
+      return;
+    }
+    void window.navManager.configurePlugin(id, payload.config).catch(() => {});
   });
   await (document.fonts?.ready ?? Promise.resolve());
   await window.navManager.navigateTo(window.navManager.getStoredPage());
