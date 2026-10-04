@@ -2,7 +2,7 @@
 
 ## 1. Status and terminology
 
-This document defines manifest schema version `1.0.0` and the runtime contract between CastBoard and built-in, development, and host-registered plugins.
+This document defines the plugin manifest format and the runtime contract between CastBoard and built-in, development, and host-registered plugins.
 
 The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT**, and **MAY** in this document are to be interpreted as described in RFC 2119 and RFC 8174 when, and only when, they appear in all capitals.
 
@@ -25,6 +25,8 @@ Plugins execute in the CastBoard document. Their UI is isolated by a Shadow DOM 
 ## 3. Manifest
 
 ### 3.1 Example
+
+`schemaVersion` is deprecated and MAY be omitted in new plugins. Existing plugins that already include it remain valid. The example below retains it to illustrate that the field is accepted.
 
 ```json
 {
@@ -49,7 +51,7 @@ Plugins execute in the CastBoard document. Their UI is isolated by a Shadow DOM 
 
 | Field | Required | Type | Contract |
 | --- | --- | --- | --- |
-| `schemaVersion` | Yes | string | Manifest schema version in restricted SemVer form. Authors targeting this specification MUST use `1.0.0`. |
+| `schemaVersion` | No | string | **Deprecated.** Accepted for backward compatibility; hosts no longer validate its value. New plugins SHOULD omit this field. |
 | `id` | Yes | string | Non-empty identifier. It MUST be unique within one CastBoard runtime. |
 | `name` | Yes | localized strings | User-facing plugin name. |
 | `description` | No | localized strings | User-facing summary of the plugin. |
@@ -60,11 +62,11 @@ Plugins execute in the CastBoard document. Their UI is isolated by a Shadow DOM 
 | `icon` | No | implementation-defined | Reserved for host presentation. The current runtime MAY ignore it. |
 | `configSchema` | No | CastBoard Config Schema | Declares host-rendered configuration fields. Plugins using it MUST require CastBoard `2.3.0` or newer. |
 
-The restricted SemVer form accepted by this schema is exactly three decimal components matching `^\d+\.\d+\.\d+$`. Pre-release and build suffixes are not accepted.
+The restricted SemVer form accepted by this specification is exactly three decimal components matching `^\d+\.\d+\.\d+$`. Pre-release and build suffixes are not accepted.
 
 A localized strings value MUST be a non-empty object whose keys and values are non-empty strings. Keys SHOULD be BCP 47 language tags, and an `en` value SHOULD be present as the portable fallback. The current built-in locale order is English, Simplified Chinese, Japanese, Korean, Traditional Chinese, German, Spanish, and Russian.
 
-Consumers MUST ignore unrecognized manifest fields so that compatible schema revisions can add metadata. The current runtime validates the syntax of `schemaVersion`; it does not negotiate schema features. Plugin authors therefore MUST NOT claim a schema version whose contract they do not implement.
+Consumers MUST ignore unrecognized manifest fields so that compatible schema revisions can add metadata.
 
 ### 3.3 CastBoard Config Schema
 
@@ -221,7 +223,6 @@ The host event `plugins.register` accepts one registration, an array of registra
 ```json
 {
   "manifest": {
-    "schemaVersion": "1.0.0",
     "id": "com.example.weather",
     "name": { "en": "Weather" },
     "description": { "en": "Displays current weather conditions." },

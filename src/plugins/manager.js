@@ -1,5 +1,4 @@
 const REQUIRED_MANIFEST_FIELDS = [
-  "schemaVersion",
   "id",
   "name",
   "version",
@@ -224,7 +223,7 @@ function normalizeManifest(manifest) {
     throw new TypeError("Plugin manifest entry must be a non-empty string");
   }
   if (!PLUGIN_TYPES.has(manifest.type)) throw new TypeError(`Unsupported plugin type: ${manifest.type}`);
-  for (const field of ["schemaVersion", "version", "minCastBoardVersion"]) {
+  for (const field of ["version", "minCastBoardVersion"]) {
     if (typeof manifest[field] !== "string" || !SEMANTIC_VERSION_PATTERN.test(manifest[field])) {
       throw new TypeError(`Plugin manifest field must be a semantic version: ${field}`);
     }
