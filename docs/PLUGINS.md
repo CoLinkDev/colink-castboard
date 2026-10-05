@@ -277,6 +277,8 @@ The development server scans immediate child directories and includes only those
 
 When the runtime `debug` param is enabled, minimum CastBoard version enforcement is disabled for both development packages and host-registered plugins. Manifest syntax and lifecycle validation remain enforced.
 
+For a complete standalone implementation, see the official [Counter example plugin](https://github.com/CoLinkDev/castboard-plugin-counter). It demonstrates a navigable page, configuration updates, lifecycle hooks, local storage, packaging, and release automation.
+
 ## 10. Isolation, failures, and fallback
 
 Each plugin receives a separate Shadow DOM root and host shell. This isolates selectors and most presentation styles, but it is not a security boundary: plugins share the document, global objects, storage origin, and network capabilities.
